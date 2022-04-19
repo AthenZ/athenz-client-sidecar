@@ -1,4 +1,4 @@
-module github.com/yahoojapan/athenz-client-sidecar/v2
+module github.com/AthenZ/athenz-client-sidecar/v2
 
 go 1.14
 

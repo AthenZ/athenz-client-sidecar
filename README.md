@@ -1,14 +1,10 @@
 # Athenz client sidecar
 
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-client-sidecar/releases/latest)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/AthenZ/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/AthenZ/athenz-client-sidecar/releases/latest)
 [![Docker Image Version (tag latest)](https://img.shields.io/docker/v/yahoojapan/athenz-client-sidecar/latest?style=flat-square&label=Docker%20version)](https://hub.docker.com/r/yahoojapan/athenz-client-sidecar/tags)
-[![CircleCI](https://circleci.com/gh/yahoojapan/athenz-client-sidecar.svg)](https://circleci.com/gh/yahoojapan/athenz-client-sidecar)
-[![codecov](https://codecov.io/gh/yahoojapan/athenz-client-sidecar/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-client-sidecar)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-client-sidecar)](https://goreportcard.com/report/github.com/yahoojapan/athenz-client-sidecar)
-[![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-client-sidecar.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-client-sidecar)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f5e641145b274353919ee4a2ff6566e3)](https://www.codacy.com/app/i.can.feel.gravity/athenz-client-sidecar?utm_source=github.com&utm_medium=referral&utm_content=yahoojapan/athenz-client-sidecar&utm_campaign=Badge_Grade)
-[![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-client-sidecar?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-client-sidecar)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AthenZ/athenz-client-sidecar)](https://goreportcard.com/report/github.com/AthenZ/athenz-client-sidecar)
+[![GoDoc](http://godoc.org/github.com/AthenZ/athenz-client-sidecar?status.svg)](http://godoc.org/github.com/AthenZ/athenz-client-sidecar)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](code_of_conduct.md)
 
 ![logo](./images/logo.png)
@@ -259,7 +255,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/yahoojapan/athenz-client-sidecar/v2/model"
+    "github.com/AthenZ/athenz-client-sidecar/v2/model"
 )
 
 const scURL = "127.0.0.1" // sidecar URL
@@ -303,7 +299,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/yahoojapan/athenz-client-sidecar/v2/model"
+    "github.com/AthenZ/athenz-client-sidecar/v2/model"
 )
 
 const scURL = "127.0.0.1" // sidecar URL
@@ -363,7 +359,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/yahoojapan/athenz-client-sidecar/v2/model"
+    "github.com/AthenZ/athenz-client-sidecar/v2/model"
 )
 
 const scURL = "127.0.0.1" // sidecar URL
@@ -423,7 +419,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/yahoojapan/athenz-client-sidecar/v2/model"
+    "github.com/AthenZ/athenz-client-sidecar/v2/model"
 )
 
 const scURL = "127.0.0.1" // sidecar URL
@@ -638,12 +634,12 @@ limitations under the License.
 
 This project requires contributors to agree to a [Contributor License Agreement (CLA)](https://gist.github.com/ydnjp/3095832f100d5c3d2592).
 
-Note that only for contributions to the `athenz-client-sidecar` repository on the [GitHub](https://github.com/yahoojapan/garathenz-client-sidecarm), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
+Note that only for contributions to the `athenz-client-sidecar` repository on the [GitHub](https://github.com/AthenZ/garathenz-client-sidecarm), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
 
 ## About releases
 
 - Releases
-    - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-client-sidecar/releases/latest)
+    - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/AthenZ/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/AthenZ/athenz-client-sidecar/releases/latest)
     - [![Docker Image Version (tag latest)](https://img.shields.io/docker/v/yahoojapan/athenz-client-sidecar/latest?style=flat-square&label=Docker%20version)](https://hub.docker.com/r/yahoojapan/athenz-client-sidecar/tags)
 
 ## Authors

@@ -29,10 +29,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/infra"
+	"github.com/AthenZ/athenz-client-sidecar/v2/service"
 	"github.com/kpango/ntokend"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/infra"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/service"
 )
 
 // NotEqualError reports the name of the field having different value and their values.

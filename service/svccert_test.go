@@ -26,11 +26,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/AthenZ/athenz/clients/go/zts"
 	"github.com/kpango/fastime"
 	"github.com/kpango/glg"
 	"github.com/kpango/ntokend"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
 )
 
 func init() {

@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
 )
 
 func TestParseParams(t *testing.T) {

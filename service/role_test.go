@@ -28,11 +28,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
 )
 
 func TestNewRoleService(t *testing.T) {

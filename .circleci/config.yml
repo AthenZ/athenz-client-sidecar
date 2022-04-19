@@ -2,13 +2,13 @@
 alias:
 
   default: &default
-    working_directory: /go/src/github.com/yahoojapan/athenz-client-sidecar
+    working_directory: /go/src/github.com/AthenZ/athenz-client-sidecar
     docker:
       - image: circleci/golang:1.14
         environment:
           GOPATH: "/go"
           GO111MODULE: "on"
-          REPO_NAME: "yahoojapan"
+          REPO_NAME: "AthenZ"
           DOCKERHUB_REPO_NAME: "yahoojapan"
           IMAGE_NAME: "athenz-client-sidecar"
           GITHUB_API: "https://api.github.com/"
