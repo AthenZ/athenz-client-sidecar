@@ -13,7 +13,7 @@ on:
   # workflows triggered on the push or pull_request events will be skipped.
   # https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
   push:
-    branches: [ main ]
+    branches: [ master ]
     # Publish semver tags as releases.
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
   # If any commit message in your push or the HEAD commit of your PR contains the strings
@@ -21,16 +21,15 @@ on:
   # workflows triggered on the push or pull_request events will be skipped.
   # https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
-  DOCKER_REGISTRY_OWNER: tatyano
-  # DOCKER_BUILD_ARGS: |
+  DOCKER_REGISTRY_OWNER: athenz
+  GOLANG_VERSION: ^1.18
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     permissions:
       actions: none
@@ -74,7 +73,44 @@ jobs:
         id: checkout
         # You may pin to the exact commit or the version.
         # uses: https://github.com/actions/checkout/tags
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      # This action sets up a go environment for use in actions by:
+      # - Optionally downloading and caching a version of Go by version and adding to PATH.
+      # - Registering problem matchers for error output.
+      # https://github.com/actions/setup-go
+      -
+        name: Setup Golang
+        id: setup-go
+        # You may pin to the exact commit or the version.
+        # uses: https://github.com/actions/setup-go/tags
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GOLANG_VERSION }}
+
+      # This action allows caching dependencies and build outputs to improve workflow execution time.
+      # https://github.com/actions/cache
+      -
+        name: Cache Go Modules
+        id: cache-go
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # A GitHub Action for golang tests
+      -
+        name: Golang Tests
+        id: go-tests
+        run: |
+          go version
+          rm -rf example
+          go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
 
       # The Github action runs CIS Dockerfile benchmark against dockerfiles in repository (CIS 4.1, 4.2, 4.3, 4.6, 4.7, 4.9, 4.10)
       # https://github.com/sysdiglabs/benchmark-dockerfile
@@ -112,7 +148,7 @@ jobs:
         id: meta
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/metadata-action/tags
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}
           # for latest tag
@@ -127,7 +163,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=ref,event=pr
-            type=semver,pattern={{version}}
+            type=semver,pattern=v{{version}}
             type=schedule,pattern=nightly
 
       # GitHub Action to login against a Docker registry.
@@ -138,7 +174,7 @@ jobs:
         id: login
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/login-action/tags
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           # Server address of Docker registry. If not set then will default to Docker Hub
           registry: ${{ env.DOCKER_REGISTRY_URL }} # optional
@@ -156,7 +192,7 @@ jobs:
         id: qemu
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/setup-qemu-action/tags
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       # GitHub Action to set up Docker Buildx.
       # https://github.com/docker/setup-buildx-action
@@ -165,7 +201,7 @@ jobs:
         id: buildx
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/setup-buildx-action/tags
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
@@ -174,14 +210,23 @@ jobs:
         id: build_and_push
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/build-push-action/tags
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
-          build-args: ${{ env.DOCKER_BUILD_ARGS }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+
+      # Test Docker image
+      -
+        name: Test Docker image
+        id: test_docker
+        run: |
+          docker run --rm ${{ fromJSON(steps.meta.outputs.json).tags[0] }} --version
 
       # Delete untagged container images
       # https://github.com/actions/github-script
