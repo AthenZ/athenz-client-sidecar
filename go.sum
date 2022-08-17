@@ -1,5 +1,7 @@
 github.com/AthenZ/athenz v1.11.5 h1:FPagMbDj799NxQDxj1mpE7ceHtC9juqt63BWOga9YyQ=
 github.com/AthenZ/athenz v1.11.5/go.mod h1:Up0jlS3E3h6YWqOZpdbW26rmUtnGhZB+AQDZtWpoGUo=
+github.com/AthenZ/athenz v1.11.6 h1:X9afe1ziWKY//PKnRBaeZOHXu/HRpuxZrcUgMT5rTBw=
+github.com/AthenZ/athenz v1.11.6/go.mod h1:Up0jlS3E3h6YWqOZpdbW26rmUtnGhZB+AQDZtWpoGUo=
 github.com/ardielle/ardielle-go v1.5.2 h1:TilHTpHIQJ27R1Tl/iITBzMwiUGSlVfiVhwDNGM3Zj4=
 github.com/ardielle/ardielle-go v1.5.2/go.mod h1:I4hy1n795cUhaVt/ojz83SNVCYIGsAFAONtv2Dr7HUI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -14,6 +16,8 @@ github.com/kpango/gache v1.2.8 h1:+OjREOmuWO4qrJksDhzWJq80o9iwHiezdVmMR1jtCG0=
 github.com/kpango/gache v1.2.8/go.mod h1:UyBo0IoPFDSJypK2haDXeV6PwHEmBcXQA0BLuOYEvWg=
 github.com/kpango/glg v1.6.11 h1:5lXZ/5VEK4eWL5pjPE5ZMxN1JHlFqIimWSiXpq0h9oo=
 github.com/kpango/glg v1.6.11/go.mod h1:r7Ikzdm7isdpn2CM1fGsE3dZH5iDpP/MzHMfPhUngY0=
+github.com/kpango/glg v1.6.12 h1:DyfcHrBAOpnYU85YJK4QUynQ2WA73r+9+lc7XxvGiws=
+github.com/kpango/glg v1.6.12/go.mod h1:E8OndzZYI5jowBGwWsKvYLuwtjSKjRzSERjjYppyRjc=
 github.com/kpango/ntokend v1.0.12 h1:vWDaoNVLm+UJ/DymS+GHcHbgNW+/X7zcqH88ATOxgO0=
 github.com/kpango/ntokend v1.0.12/go.mod h1:QYre+9aRY0M2NyC9IObW9S3tyPwpQhNccAoa6XDoa5M=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
@@ -32,6 +36,7 @@ golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f h1:v4INt8xihDGvnrfjMDVXGxw9wrfxYyCjk0KbXjhR55s=
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220817070843-5a390386f1f2/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
