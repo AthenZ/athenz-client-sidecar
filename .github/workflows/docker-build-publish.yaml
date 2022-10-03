@@ -227,25 +227,3 @@ jobs:
         id: test_docker
         run: |
           docker run --rm ${{ fromJSON(steps.meta.outputs.json).tags[0] }} --version
-
-      # Delete untagged container images
-      # https://github.com/actions/github-script
-      - name: Delete untagged images
-        id: delete_untaged_images
-        if: env.DOCKER_REGISTRY_URL == 'ghcr.io'
-        # You may pin to the exact commit or the version.
-        # uses: https://github.com/actions/github-script/tags
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ env.DELETE_UNTAGGED_IMAGES_TOKEN }}
-          script: |
-            const response = await github.request("GET /user/packages/container/${{ env.DOCKER_REGISTRY_IMAGE }}/versions", {
-              per_page: ${{ env.DELETE_UNTAGGED_IMAGES_PER_PAGE }}
-            });
-            for(version of response.data) {
-              if (version.metadata.container.tags.length == 0) {
-                console.log("delete " + version.id)
-                const deleteResponse = await github.request("DELETE /user/packages/container/${{ env.DOCKER_REGISTRY_IMAGE }}/versions/" + version.id, { });
-                console.log("status " + deleteResponse.status)
-              }
-            }
