@@ -22,14 +22,14 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/handler"
+	"github.com/AthenZ/athenz-client-sidecar/v2/infra"
+	"github.com/AthenZ/athenz-client-sidecar/v2/router"
+	"github.com/AthenZ/athenz-client-sidecar/v2/service"
 	"github.com/kpango/glg"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/handler"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/infra"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/router"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/service"
 )
 
 // Tenant represents a client sidecar behavior

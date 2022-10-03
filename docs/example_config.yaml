@@ -70,8 +70,8 @@ serviceCert:
     organizationalUnit: Athenz
 proxy:
   enable: true
-  principalAuthHeader: Yahoo-Principal-Auth
-  roleAuthHeader: Yahoo-Role-Auth
+  principalAuthHeader: Athenz-Principal-Auth
+  roleAuthHeader: Athenz-Role-Auth
   bufferSize: 1024
 log:
   level: debug

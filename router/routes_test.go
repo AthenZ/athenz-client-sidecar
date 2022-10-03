@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/handler"
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/handler"
 )
 
 func TestNewRoutes(t *testing.T) {

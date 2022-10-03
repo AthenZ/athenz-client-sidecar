@@ -23,10 +23,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/model"
+	"github.com/AthenZ/athenz-client-sidecar/v2/service"
 	"github.com/kpango/ntokend"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/model"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/service"
 )
 
 // Handler for handling a set of HTTP requests.
