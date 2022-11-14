@@ -19,7 +19,7 @@ package service
 import (
 	"net/http"
 
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 )
 
 // Option represents the functional option implementation for server.

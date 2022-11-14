@@ -24,10 +24,10 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/AthenZ/athenz-client-sidecar/v2/usecase"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/usecase"
 )
 
 // Version is set by the build command via LDFLAGS

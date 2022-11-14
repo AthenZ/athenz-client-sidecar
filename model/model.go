@@ -17,7 +17,7 @@ limitations under the License.
 package model
 
 import (
-	"github.com/yahoojapan/athenz-client-sidecar/v2/service"
+	"github.com/AthenZ/athenz-client-sidecar/v2/service"
 )
 
 // AccessRequest represents the request information to retrieve the access token.

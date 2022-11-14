@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
 )
 
 var (

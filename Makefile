@@ -15,7 +15,6 @@ clean:
 	rm -rf pprof
 	rm -rf vendor
 
-
 bench: clean init
 	go test -count=5 -run=NONE -bench . -benchmem
 
@@ -38,10 +37,11 @@ test: clean init
 contributors:
 	git log --format='%aN <%aE>' | sort -fu > CONTRIBUTORS
 
+docker-push:
+	sudo docker build --pull=true --file=Dockerfile -t docker.io/athenz/athenz-client-sidecar:latest .
+	sudo docker push docker.io/athenz/athenz-client-sidecar:latest
+
 coverage:
 	go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
-	rm -f coverage.outdocker-push:
-	sudo docker build --pull=true --file=Dockerfile -t yahoojapan/athenz-client-sidecar:latest .
-	sudo docker push yahoojapan/athenz-client-sidecar:latest
-
+	rm -f coverage.out

@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/glg"
-	"github.com/yahoojapan/athenz-client-sidecar/v2/config"
 )
 
 // Server represents a client sidecar server behavior
