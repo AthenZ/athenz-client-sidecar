@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -105,13 +105,19 @@ func run(cfg config.Config) []error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
 
+	isSignal := false
 	for {
 		select {
-		case <-sigCh:
+		case sig := <-sigCh:
+			glg.Infof("Athenz client server received signal: %v", sig)
+			isSignal = true
 			cancel()
 			glg.Warn("Athenz client server shutdown...")
 		case errs := <-ech:
-			return errs
+			if !isSignal || len(errs) != 1 || errs[0] != ctx.Err() {
+				return errs
+			}
+			return nil
 		}
 	}
 }
@@ -157,9 +163,11 @@ func main() {
 
 	errs := run(*cfg)
 	if len(errs) > 0 {
-		glg.Fatal(errs)
+		glg.Fatalf("%+v", errs)
 		return
 	}
+	glg.Info("sidecar shutdown success")
+	os.Exit(1)
 }
 
 func getVersion() string {

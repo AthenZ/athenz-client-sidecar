@@ -216,7 +216,7 @@ func (a *accessService) StartAccessUpdater(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
-				glg.Info("Stopping access token updater")
+				glg.Info("Stopping access token updater...")
 				ticker.Stop()
 				ech <- ctx.Err()
 				return

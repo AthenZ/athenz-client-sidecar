@@ -231,7 +231,7 @@ func (r *roleService) StartRoleUpdater(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
-				glg.Info("Stopping role token updater")
+				glg.Info("Stopping role token updater...")
 				ticker.Stop()
 				ech <- ctx.Err()
 				return
