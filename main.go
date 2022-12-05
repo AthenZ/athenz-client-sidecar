@@ -109,10 +109,10 @@ func run(cfg config.Config) []error {
 	for {
 		select {
 		case sig := <-sigCh:
-			glg.Infof("Athenz client server received signal: %v", sig)
+			glg.Infof("Athenz client sidecar received signal: %v", sig)
 			isSignal = true
 			cancel()
-			glg.Warn("Athenz client server shutdown...")
+			glg.Warn("Athenz client sidecar shutdown...")
 		case errs := <-ech:
 			if !isSignal || len(errs) != 1 || errs[0] != ctx.Err() {
 				return errs
