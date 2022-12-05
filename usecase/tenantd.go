@@ -140,9 +140,9 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 			for err := range t.access.StartAccessUpdater(ctx) {
 				if err == ctx.Err() {
 					glg.Info("Stopped access token updater")
-				} else {
-					glg.Errorf("StartAccessUpdater error: %s", err.Error())
+					continue
 				}
+				glg.Errorf("StartAccessUpdater error: %s", err.Error())
 			}
 		}()
 	}
@@ -152,9 +152,9 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 			for err := range t.role.StartRoleUpdater(ctx) {
 				if err == ctx.Err() {
 					glg.Info("Stopped role token updater")
-				} else {
-					glg.Errorf("StartRoleUpdater error: %s", err.Error())
+					continue
 				}
+				glg.Errorf("StartRoleUpdater error: %s", err.Error())
 			}
 		}()
 	}
