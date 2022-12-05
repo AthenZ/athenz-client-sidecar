@@ -166,7 +166,7 @@ func main() {
 		glg.Fatalf("%+v", errs)
 		return
 	}
-	glg.Info("sidecar shutdown success")
+	glg.Info("Athenz client sidecar shutdown success")
 	os.Exit(1)
 }
 
