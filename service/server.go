@@ -132,7 +132,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 		s.mu.Unlock()
 		wg.Done()
 
-		glg.Info("client sidecar api server starting")
+		glg.Info("Athenz client sidecar api server starting")
 		sech <- s.listenAndServeAPI()
 		close(sech)
 
@@ -150,7 +150,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 			s.mu.Unlock()
 			wg.Done()
 
-			glg.Info("client sidecar health check server starting")
+			glg.Info("Athenz client sidecar health check server starting")
 			hech <- s.hcsrv.ListenAndServe()
 			close(hech)
 
@@ -177,11 +177,11 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 			case <-ctx.Done(): // when context receive done signal, close running servers and return any error
 				s.mu.RLock()
 				if s.hcrunning {
-					glg.Info("client sidecar health check server will shutdown")
+					glg.Info("Athenz client sidecar health check server will shutdown")
 					errs = appendErr(errs, s.hcShutdown(context.Background()))
 				}
 				if s.srvRunning {
-					glg.Info("client sidecar api server will shutdown")
+					glg.Info("Athenz client sidecar api server will shutdown")
 					errs = appendErr(errs, s.apiShutdown(context.Background()))
 				}
 				s.mu.RUnlock()
@@ -196,7 +196,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 
 				s.mu.RLock()
 				if s.hcrunning {
-					glg.Info("client sidecar health check server will shutdown")
+					glg.Info("Athenz client sidecar health check server will shutdown")
 					errs = appendErr(errs, s.hcShutdown(ctx))
 				}
 				s.mu.RUnlock()
@@ -210,7 +210,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 
 				s.mu.RLock()
 				if s.srvRunning {
-					glg.Info("client sidecar api server will shutdown")
+					glg.Info("Athenz client sidecar api server will shutdown")
 					errs = appendErr(errs, s.apiShutdown(ctx))
 				}
 				s.mu.RUnlock()
