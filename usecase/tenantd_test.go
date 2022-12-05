@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -339,6 +340,10 @@ func Test_clientd_Start(t *testing.T) {
 					if err != nil {
 						panic(err)
 					}
+					svccert, err := service.NewSvcCertService(cfg, token.GetTokenProvider())
+					if err != nil {
+						panic(err)
+					}
 
 					h := handler.New(
 						cfg.Proxy,
@@ -346,7 +351,7 @@ func Test_clientd_Start(t *testing.T) {
 						token.GetTokenProvider(),
 						access.GetAccessProvider(),
 						role.GetRoleProvider(),
-						nil,
+						svccert.GetSvcCertProvider(),
 					)
 
 					serveMux := router.New(cfg, h)
@@ -361,7 +366,7 @@ func Test_clientd_Start(t *testing.T) {
 						server:  server,
 						access:  access,
 						role:    role,
-						svccert: nil,
+						svccert: svccert,
 					}
 				}(),
 				args: args{
@@ -382,6 +387,96 @@ func Test_clientd_Start(t *testing.T) {
 					os.Unsetenv(strings.TrimPrefix(strings.TrimSuffix(keyKey, "_"), "_"))
 				},
 				want: []error{context.Canceled},
+			}
+		}(),
+		func() test {
+			cfg := config.Config{
+				NToken: config.NToken{
+					Enable: true,
+				},
+				AccessToken: config.AccessToken{
+					Enable: true,
+				},
+				RoleToken: config.RoleToken{
+					Enable: true,
+				},
+				Server: config.Server{
+					ShutdownTimeout: "1s",
+					ShutdownDelay:   "1s",
+					TLS: config.TLS{
+						Enable: false,
+					},
+				},
+				ServiceCert: config.ServiceCert{
+					Enable:        true,
+					AthenzCAPath:  "../test/data/dummyCa.pem",
+					RefreshPeriod: "",
+				},
+			}
+
+			ctx, cancelFunc := context.WithCancel(context.Background())
+			return test{
+				name: "Token updater erros",
+				fields: func() fields {
+					access := &service.AccessServiceMock{
+						StartAccessUpdaterFunc: func(ctx context.Context) <-chan error {
+							errCh := make(chan error, 1)
+							go func() {
+								errCh <- errors.New("dummy error in StartAccessUpdaterFunc")
+							}()
+							return errCh
+						},
+					}
+					role := &service.RoleServiceMock{
+						StartRoleUpdaterFunc: func(ctx context.Context) <-chan error {
+							errCh := make(chan error, 1)
+							go func() {
+								errCh <- errors.New("dummy error in StartRoleUpdaterFunc")
+							}()
+							return errCh
+						},
+					}
+
+					h := handler.New(
+						cfg.Proxy,
+						infra.NewBuffer(cfg.Proxy.BufferSize),
+						nil,
+						nil,
+						nil,
+						nil,
+					)
+
+					serveMux := router.New(cfg, h)
+					server := service.NewServer(
+						service.WithServerConfig(cfg.Server),
+						service.WithServerHandler(serveMux),
+					)
+
+					return fields{
+						cfg:     cfg,
+						token:   nil,
+						server:  server,
+						access:  access,
+						role:    role,
+						svccert: nil,
+					}
+				}(),
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(got chan []error, want []error) error {
+					time.Sleep(time.Millisecond * 200)
+					cancelFunc()
+					time.Sleep(time.Millisecond * 200)
+
+					gotErr := <-got
+					if !reflect.DeepEqual(gotErr, want) {
+						return fmt.Errorf("Got: %v, want: %v", gotErr, want)
+					}
+					return nil
+				},
+				afterFunc: nil,
+				want:      []error{context.Canceled},
 			}
 		}(),
 	}
