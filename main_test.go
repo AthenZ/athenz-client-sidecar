@@ -441,47 +441,45 @@ func Test_run(t *testing.T) {
 				return nil
 			},
 		},
-		func() test {
-			return test{
-				name: "Detect no errors including context error with interrupt shutdown of Athenz Sidecar",
-				args: args{
-					cfg: config.Config{
-						NToken: config.NToken{
-							Enable:            false,
-							PrivateKeyPath:    "./test/data/dummyServer.key",
-							Validate:          false,
-							RefreshPeriod:     "1m",
-							KeyVersion:        "1",
-							Expiry:            "1m",
-							ExistingTokenPath: "",
-							AthenzDomain:      "dummyDomain",
-							ServiceName:       "dummyService",
-						},
-						Server: config.Server{
-							ShutdownDelay:   "2s",
-							Timeout:         "10s",
-							ShutdownTimeout: "2s",
-						},
-						ServiceCert: config.ServiceCert{
-							Enable:        false,
-							AthenzCAPath:  "./test/data/dummyCa.pem",
-							RefreshPeriod: "30m",
-							ExpiryMargin:  "1h",
-						},
+		{
+			name: "Detect no errors including context error with interrupt shutdown of Athenz Sidecar",
+			args: args{
+				cfg: config.Config{
+					NToken: config.NToken{
+						Enable:            false,
+						PrivateKeyPath:    "./test/data/dummyServer.key",
+						Validate:          false,
+						RefreshPeriod:     "1m",
+						KeyVersion:        "1",
+						Expiry:            "1m",
+						ExistingTokenPath: "",
+						AthenzDomain:      "dummyDomain",
+						ServiceName:       "dummyService",
+					},
+					Server: config.Server{
+						ShutdownDelay:   "2s",
+						Timeout:         "10s",
+						ShutdownTimeout: "2s",
+					},
+					ServiceCert: config.ServiceCert{
+						Enable:        false,
+						AthenzCAPath:  "./test/data/dummyCa.pem",
+						RefreshPeriod: "30m",
+						ExpiryMargin:  "1h",
 					},
 				},
-				beforeFunc: func(proc *os.Process) {
-					proc.Signal(os.Interrupt)
-				},
-				checkFunc: func(gotErrs []error) error {
-					if len(gotErrs) >= 1 {
-						return errors.New("len(gotErrs) >= 1")
-					}
-					// There should be no log what so ever.
-					return nil
-				},
-			}
-		}(),
+			},
+			beforeFunc: func(proc *os.Process) {
+				proc.Signal(os.Interrupt)
+			},
+			checkFunc: func(gotErrs []error) error {
+				if len(gotErrs) >= 1 {
+					return errors.New("len(gotErrs) >= 1")
+				}
+				// There should be no log what so ever.
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
