@@ -473,10 +473,9 @@ func Test_run(t *testing.T) {
 				proc.Signal(os.Interrupt)
 			},
 			checkFunc: func(gotErrs []error) error {
-				if len(gotErrs) >= 1 {
+				if len(gotErrs) >= 1 { // There should be no log whatsoever.
 					return errors.New("len(gotErrs) >= 1")
 				}
-				// There should be no log what so ever.
 				return nil
 			},
 		},
