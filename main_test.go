@@ -94,6 +94,7 @@ func Test_run(t *testing.T) {
 	type test struct {
 		name      string
 		args      args
+		beforeFunc func(os *os.Process)
 		checkFunc func([]error) error
 	}
 	tests := []test{
@@ -432,38 +433,14 @@ func Test_run(t *testing.T) {
 				return nil
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotErrs := run(tt.args.cfg)
-			if err := tt.checkFunc(gotErrs); err != nil {
-				t.Errorf("run() fails: %v", err)
-			}
-		})
-	}
-}
-
-func Test_run_success(t *testing.T) {
-	type args struct {
-		cfg config.Config
-	}
-	type test struct {
-		name      string
-		args      args
-		beforeFunc func(os *os.Process)
-		checkFunc func([]error) error
-	}
-	tests := []test{
 		func() test {
-			key := "./test/data/dummyServer.key"
-
 			return test{
-				name: "Detect no errors with graceful shutdown of Athenz Sidecar",
+				name: "Detect no errors including context error with interrupt shutdown of Athenz Sidecar",
 				args: args{
 					cfg: config.Config{
 						NToken: config.NToken{
 							Enable:            false,
-							PrivateKeyPath:    key,
+							PrivateKeyPath:    "./test/data/dummyServer.key",
 							Validate:          false,
 							RefreshPeriod:     "1m",
 							KeyVersion:        "1",
@@ -502,16 +479,17 @@ func Test_run_success(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			proc, err := os.FindProcess(os.Getpid())
 
-			time.AfterFunc(3 * time.Second, func() {
-				tt.beforeFunc(proc)
-			})
-
+			if (tt.beforeFunc != nil) {
+				time.AfterFunc(3 * time.Second, func() {
+					tt.beforeFunc(proc)
+				})
+			}
+			
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("os.FindProcess(os.Getpid()) fails: %v", err)
 			}
 
 			gotErrs := run(tt.args.cfg)
-			
 			if err := tt.checkFunc(gotErrs); err != nil {
 				t.Errorf("run() fails: %v", err)
 			}
