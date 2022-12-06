@@ -4,6 +4,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/glg"
@@ -435,6 +436,82 @@ func Test_run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotErrs := run(tt.args.cfg)
+			if err := tt.checkFunc(gotErrs); err != nil {
+				t.Errorf("run() fails: %v", err)
+			}
+		})
+	}
+}
+
+func Test_run_success(t *testing.T) {
+	type args struct {
+		cfg config.Config
+	}
+	type test struct {
+		name      string
+		args      args
+		beforeFunc func(os *os.Process)
+		checkFunc func([]error) error
+	}
+	tests := []test{
+		func() test {
+			key := "./test/data/dummyServer.key"
+
+			return test{
+				name: "Detect no errors with graceful shutdown of Athenz Sidecar",
+				args: args{
+					cfg: config.Config{
+						NToken: config.NToken{
+							Enable:            false,
+							PrivateKeyPath:    key,
+							Validate:          false,
+							RefreshPeriod:     "1m",
+							KeyVersion:        "1",
+							Expiry:            "1m",
+							ExistingTokenPath: "",
+							AthenzDomain:      "dummyDomain",
+							ServiceName:       "dummyService",
+						},
+						Server: config.Server{
+							ShutdownDelay: "2s",
+							Timeout: "10s",
+							ShutdownTimeout: "2s",	
+						},
+						ServiceCert: config.ServiceCert{
+							Enable:        false,
+							AthenzCAPath:  "./test/data/dummyCa.pem",
+							RefreshPeriod: "30m",
+							ExpiryMargin:  "1h",
+						},
+					},
+				},
+				beforeFunc: func(proc *os.Process) {
+					proc.Signal(os.Interrupt)
+				},
+				checkFunc: func(gotErrs []error) error {
+					if len(gotErrs) >= 1 {
+						return errors.New("len(gotErrs) >= 1")
+					}
+					// There should be no log what so ever.
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proc, err := os.FindProcess(os.Getpid())
+
+			time.AfterFunc(3 * time.Second, func() {
+				tt.beforeFunc(proc)
+			})
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotErrs := run(tt.args.cfg)
+			
 			if err := tt.checkFunc(gotErrs); err != nil {
 				t.Errorf("run() fails: %v", err)
 			}
