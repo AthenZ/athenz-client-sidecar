@@ -2,7 +2,11 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"reflect"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -71,6 +75,10 @@ func TestParseParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer func(oldArgs []string) {
+				// restore os.Args
+				os.Args = oldArgs
+			}(os.Args)
 			if tt.beforeFunc != nil {
 				tt.beforeFunc()
 			}
@@ -450,9 +458,9 @@ func Test_run(t *testing.T) {
 							ServiceName:       "dummyService",
 						},
 						Server: config.Server{
-							ShutdownDelay: "2s",
-							Timeout: "10s",
-							ShutdownTimeout: "2s",	
+							ShutdownDelay:   "2s",
+							Timeout:         "10s",
+							ShutdownTimeout: "2s",
 						},
 						ServiceCert: config.ServiceCert{
 							Enable:        false,
@@ -511,6 +519,135 @@ func Test_getVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getVersion(); got != tt.want {
 				t.Errorf("getVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_main(t *testing.T) {
+	type test struct {
+		name       string
+		beforeFunc func()
+		afterFunc  func()
+	}
+	tests := []test{
+		func() test {
+			var oldArgs []string
+			return test{
+				name: "show version",
+				beforeFunc: func() {
+					oldArgs = os.Args
+					os.Args = []string{"athenz-client-sidecar", "-version"}
+				},
+				afterFunc: func() {
+					os.Args = oldArgs
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tt.afterFunc()
+			tt.beforeFunc()
+			main()
+		})
+	}
+}
+
+func Test_mainExitCode(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		signal       os.Signal
+		wantExitCode int
+	}{
+		{
+			name: "normal exit",
+			args: []string{
+				"-version",
+			},
+			signal:       nil,
+			wantExitCode: 0,
+		},
+		{
+			name: "undefined flag",
+			args: []string{
+				"-undefined_flag",
+			},
+			signal:       nil,
+			wantExitCode: 1,
+		},
+		{
+			name: "run with log error",
+			args: []string{
+				"-f",
+				"./test/data/invalid_log_config.yaml",
+			},
+			signal:       nil,
+			wantExitCode: 1,
+		},
+		{
+			name: "run till termination SIGINT",
+			args: []string{
+				"-f",
+				"./test/data/valid_config_false.yaml",
+			},
+			signal:       syscall.SIGINT,
+			wantExitCode: 1,
+		},
+		{
+			name: "run till termination SIGTERM",
+			args: []string{
+				"-f",
+				"./test/data/valid_config_false.yaml",
+			},
+			signal:       syscall.SIGTERM,
+			wantExitCode: 1,
+		},
+	}
+
+	rc := os.Getenv("RUN_CASE")
+	if rc != "" {
+		c, err := strconv.Atoi(rc)
+		if err != nil {
+			panic(err)
+		}
+		tt := tests[c]
+
+		oldArgs := os.Args
+		defer func() { os.Args = oldArgs }()
+		os.Args = append([]string{"athenz-client-sidecar"}, tt.args...)
+
+		if tt.signal != nil {
+			// send signal
+			go func() {
+				proc, err := os.FindProcess(os.Getpid())
+				if err != nil {
+					panic(err)
+				}
+
+				time.Sleep(200 * time.Millisecond)
+				proc.Signal(tt.signal)
+			}()
+		}
+
+		// run main
+		main()
+		return
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var outbuf, errbuf strings.Builder
+
+			cmd := exec.Command(os.Args[0], "-test.run=Test_mainExitCode")
+			cmd.Stdout = &outbuf
+			cmd.Stderr = &errbuf
+			cmd.Env = append(os.Environ(), "RUN_CASE="+strconv.Itoa(i))
+			err := cmd.Run()
+			exitCode := cmd.ProcessState.ExitCode()
+			if exitCode != tt.wantExitCode {
+				t.Errorf("main() err = %v, stdout = %s, stderr = %s, exit code = %v, wantExitCode %v", err, outbuf.String(), errbuf.String(), exitCode, tt.wantExitCode)
 			}
 		})
 	}
