@@ -6,3 +6,5 @@ roleToken:
   enable: false
 proxy:
   enable: false
+log:
+  level: "invalid"

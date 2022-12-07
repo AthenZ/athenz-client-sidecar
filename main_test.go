@@ -2,8 +2,13 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"reflect"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/glg"
@@ -70,6 +75,10 @@ func TestParseParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer func(oldArgs []string) {
+				// restore os.Args
+				os.Args = oldArgs
+			}(os.Args)
 			if tt.beforeFunc != nil {
 				tt.beforeFunc()
 			}
@@ -93,6 +102,7 @@ func Test_run(t *testing.T) {
 	type test struct {
 		name      string
 		args      args
+		beforeFunc func(os *os.Process)
 		checkFunc func([]error) error
 	}
 	tests := []test{
@@ -431,9 +441,59 @@ func Test_run(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "Detect no errors including context error with interrupt shutdown of Athenz Sidecar",
+			args: args{
+				cfg: config.Config{
+					NToken: config.NToken{
+						Enable:            false,
+						PrivateKeyPath:    "./test/data/dummyServer.key",
+						Validate:          false,
+						RefreshPeriod:     "1m",
+						KeyVersion:        "1",
+						Expiry:            "1m",
+						ExistingTokenPath: "",
+						AthenzDomain:      "dummyDomain",
+						ServiceName:       "dummyService",
+					},
+					Server: config.Server{
+						ShutdownDelay:   "2s",
+						Timeout:         "10s",
+						ShutdownTimeout: "2s",
+					},
+					ServiceCert: config.ServiceCert{
+						Enable:        false,
+						AthenzCAPath:  "./test/data/dummyCa.pem",
+						RefreshPeriod: "30m",
+						ExpiryMargin:  "1h",
+					},
+				},
+			},
+			beforeFunc: func(proc *os.Process) {
+				proc.Signal(os.Interrupt)
+			},
+			checkFunc: func(gotErrs []error) error {
+				if len(gotErrs) >= 1 { // There should be no log whatsoever.
+					return errors.New("len(gotErrs) >= 1")
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			proc, err := os.FindProcess(os.Getpid())
+
+			if (tt.beforeFunc != nil) {
+				time.AfterFunc(3 * time.Second, func() {
+					tt.beforeFunc(proc)
+				})
+			}
+			
+			if err != nil {
+				t.Fatalf("os.FindProcess(os.Getpid()) fails: %v", err)
+			}
+
 			gotErrs := run(tt.args.cfg)
 			if err := tt.checkFunc(gotErrs); err != nil {
 				t.Errorf("run() fails: %v", err)
@@ -456,6 +516,135 @@ func Test_getVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getVersion(); got != tt.want {
 				t.Errorf("getVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_main(t *testing.T) {
+	type test struct {
+		name       string
+		beforeFunc func()
+		afterFunc  func()
+	}
+	tests := []test{
+		func() test {
+			var oldArgs []string
+			return test{
+				name: "show version",
+				beforeFunc: func() {
+					oldArgs = os.Args
+					os.Args = []string{"athenz-client-sidecar", "-version"}
+				},
+				afterFunc: func() {
+					os.Args = oldArgs
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tt.afterFunc()
+			tt.beforeFunc()
+			main()
+		})
+	}
+}
+
+func Test_mainExitCode(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		signal       os.Signal
+		wantExitCode int
+	}{
+		{
+			name: "normal exit",
+			args: []string{
+				"-version",
+			},
+			signal:       nil,
+			wantExitCode: 0,
+		},
+		{
+			name: "undefined flag",
+			args: []string{
+				"-undefined_flag",
+			},
+			signal:       nil,
+			wantExitCode: 1,
+		},
+		{
+			name: "run with log error",
+			args: []string{
+				"-f",
+				"./test/data/invalid_log_config.yaml",
+			},
+			signal:       nil,
+			wantExitCode: 1,
+		},
+		{
+			name: "run till termination SIGINT",
+			args: []string{
+				"-f",
+				"./test/data/valid_config_false.yaml",
+			},
+			signal:       syscall.SIGINT,
+			wantExitCode: 1,
+		},
+		{
+			name: "run till termination SIGTERM",
+			args: []string{
+				"-f",
+				"./test/data/valid_config_false.yaml",
+			},
+			signal:       syscall.SIGTERM,
+			wantExitCode: 1,
+		},
+	}
+
+	rc := os.Getenv("RUN_CASE")
+	if rc != "" {
+		c, err := strconv.Atoi(rc)
+		if err != nil {
+			panic(err)
+		}
+		tt := tests[c]
+
+		oldArgs := os.Args
+		defer func() { os.Args = oldArgs }()
+		os.Args = append([]string{"athenz-client-sidecar"}, tt.args...)
+
+		if tt.signal != nil {
+			// send signal
+			go func() {
+				proc, err := os.FindProcess(os.Getpid())
+				if err != nil {
+					panic(err)
+				}
+
+				time.Sleep(200 * time.Millisecond)
+				proc.Signal(tt.signal)
+			}()
+		}
+
+		// run main
+		main()
+		return
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var outbuf, errbuf strings.Builder
+
+			cmd := exec.Command(os.Args[0], "-test.run=Test_mainExitCode")
+			cmd.Stdout = &outbuf
+			cmd.Stderr = &errbuf
+			cmd.Env = append(os.Environ(), "RUN_CASE="+strconv.Itoa(i))
+			err := cmd.Run()
+			exitCode := cmd.ProcessState.ExitCode()
+			if exitCode != tt.wantExitCode {
+				t.Errorf("main() err = %v, stdout = %s, stderr = %s, exit code = %v, wantExitCode %v", err, outbuf.String(), errbuf.String(), exitCode, tt.wantExitCode)
 			}
 		})
 	}
