@@ -9,7 +9,7 @@
 
 ![logo](./images/logo.png)
 
-<!-- TOC insertAnchor:false -->
+<!-- TOC -->
 
 - [What is Athenz client sidecar](#what-is-athenz-client-sidecar)
   - [Get Athenz N-token from client sidecar](#get-athenz-n-token-from-client-sidecar)
@@ -40,6 +40,7 @@
 - [Authors](#authors)
 
 <!-- /TOC -->
+<!--markdownlint-disable MD013-->
 
 ## What is Athenz client sidecar
 
