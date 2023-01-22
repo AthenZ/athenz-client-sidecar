@@ -110,7 +110,19 @@ jobs:
           go version
           rm -rf example
           go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
-          go tool cover -html=coverage.out -o coverage.html
+
+      # This action uploads coverage to Codecov.
+      # https://github.com/codecov/codecov-action
+      -
+        name: Upload coverage to Codecov
+        id: go-coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
+          version: "latest"
 
       # The Github action runs CIS Dockerfile benchmark against dockerfiles in repository (CIS 4.1, 4.2, 4.3, 4.6, 4.7, 4.9, 4.10)
       # https://github.com/sysdiglabs/benchmark-dockerfile
