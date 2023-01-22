@@ -94,16 +94,16 @@ func TestParseParams(t *testing.T) {
 	}
 }
 
-// invalid values are added to Config{} in each test case so that the test case can end with server error instead of running indefinitely
+// Test_run adds invalid values to Config{} in each test case so that the test cases can end with server error instead of running indefinitely.
 func Test_run(t *testing.T) {
 	type args struct {
 		cfg config.Config
 	}
 	type test struct {
-		name      string
-		args      args
+		name       string
+		args       args
 		beforeFunc func(os *os.Process)
-		checkFunc func([]error) error
+		checkFunc  func([]error) error
 	}
 	tests := []test{
 		{
@@ -484,12 +484,12 @@ func Test_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			proc, err := os.FindProcess(os.Getpid())
 
-			if (tt.beforeFunc != nil) {
-				time.AfterFunc(3 * time.Second, func() {
+			if tt.beforeFunc != nil {
+				time.AfterFunc(3*time.Second, func() {
 					tt.beforeFunc(proc)
 				})
 			}
-			
+
 			if err != nil {
 				t.Fatalf("os.FindProcess(os.Getpid()) fails: %v", err)
 			}

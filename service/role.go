@@ -48,7 +48,7 @@ type RoleService interface {
 	GetRoleProvider() RoleProvider
 }
 
-// roleService represents the implementation of Athenz RoleService
+// roleService represents the implementation of Athenz RoleService.
 type roleService struct {
 	cfg                   config.RoleToken
 	token                 ntokend.TokenProvider
@@ -92,10 +92,10 @@ var (
 	// ErrInvalidSetting represents an error when the config file is invalid.
 	ErrInvalidSetting = errors.New("Invalid config")
 
-	// ErrDisabled represents an error when the service is disabled
+	// ErrDisabled represents an error when the service is disabled.
 	ErrDisabled = errors.New("Disabled")
 
-	// ErrNoCredentials represents an error when there are no Athenz credentials are set
+	// ErrNoCredentials represents an error when there are no Athenz credentials are set.
 	ErrNoCredentials = errors.New("No credentials")
 )
 
@@ -115,10 +115,10 @@ const (
 	// cacheKeySeparator is the separator of the internal cache key name.
 	cacheKeySeparator = ";"
 
-	// roleSeparator is the separator of the role names
+	// roleSeparator is the separator of the role names.
 	roleSeparator = ","
 
-	// cachePurgePeriod represents default cache purge period
+	// cachePurgePeriod represents default cache purge period.
 	cachePurgePeriod = time.Minute
 )
 
@@ -151,7 +151,7 @@ func NewRoleService(cfg config.RoleToken, token ntokend.TokenProvider) (RoleServ
 		}
 	}
 
-	// if user set the expiry time and refresh period > expiry time then return error
+	// if user set the expiry time and refresh period > expiry time then returns error
 	if exp != 0 && refreshPeriod > exp {
 		return nil, errors.Wrap(ErrInvalidSetting, "refresh period > token expiry time")
 	}
@@ -310,7 +310,7 @@ func (r *roleService) updateRoleTokenWithRetry(ctx context.Context, domain, role
 }
 
 // updateRoleToken returns RoleToken struct or error.
-// This function ask Athenz to generate role token and return, or return any error when generating the role token.
+// This function asks Athenz to generate role token and return, or returns any error when generating the role token.
 func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyForPrincipal string, minExpiry, maxExpiry int64) (*RoleToken, error) {
 	key := encode(domain, role, proxyForPrincipal)
 	expTimeDelta := fastime.Now().Add(time.Minute)
@@ -340,13 +340,13 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 	return rt.(*RoleToken), err
 }
 
-// fetchRoleToken fetch the role token from Athenz server, and return the decoded role token and any error if occurred.
-// P.S. Do not call fetchRoleToken() outside singleflight group, as behavior of concurrent request is not tested
+// fetchRoleToken fetches the role token from Athenz server, and returns the decoded role token and any error if occurred.
+// P.S. Do not call fetchRoleToken() outside singleflight group, as behavior of concurrent request is not tested.
 func (r *roleService) fetchRoleToken(ctx context.Context, domain, role, proxyForPrincipal string, minExpiry, maxExpiry int64) (*RoleToken, error) {
 	glg.Debugf("get role token, domain: %s, role: %s, proxyForPrincipal: %s, minExpiry: %d, maxExpiry: %d", domain, role, proxyForPrincipal, minExpiry, maxExpiry)
 
 	// prepare request object
-	req, err := r.createGetRoleTokenRequest(domain, role, minExpiry, maxExpiry, proxyForPrincipal)
+	req, err := r.createGetRoleTokenRequest(ctx, domain, role, minExpiry, maxExpiry, proxyForPrincipal)
 	if err != nil {
 		glg.Debugf("fail to create request object, error: %s", err)
 		return nil, err
@@ -407,10 +407,10 @@ func (r *roleService) getCache(domain, role, principal string) (*RoleToken, bool
 	return val.(*cacheData).token, ok
 }
 
-func (r *roleService) createGetRoleTokenRequest(domain, role string, minExpiry, maxExpiry int64, proxyForPrincipal string) (*http.Request, error) {
+func (r *roleService) createGetRoleTokenRequest(ctx context.Context, domain, role string, minExpiry, maxExpiry int64, proxyForPrincipal string) (*http.Request, error) {
 	u := fmt.Sprintf("https://%s/domain/%s/token", strings.TrimPrefix(strings.TrimPrefix(r.athenzURL, "https://"), "http://"), domain)
 
-	req, err := http.NewRequest(http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		glg.Debugf("fail to create request object, error: %s", err)
 		return nil, err

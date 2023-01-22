@@ -28,7 +28,7 @@ import (
 	"github.com/kpango/glg"
 )
 
-// Server represents a client sidecar server behavior
+// Server represents a client sidecar server behavior.
 type Server interface {
 	ListenAndServe(context.Context) chan []error
 }
@@ -56,18 +56,18 @@ type server struct {
 }
 
 const (
-	// ContentType represents a HTTP header name "Content-Type"
+	// ContentType represents a HTTP header name "Content-Type".
 	ContentType = "Content-Type"
 
-	// TextPlain represents a HTTP content type "text/plain"
+	// TextPlain represents a HTTP content type "text/plain".
 	TextPlain = "text/plain"
 
-	// CharsetUTF8 represents a UTF-8 charset for HTTP response "charset=UTF-8"
+	// CharsetUTF8 represents a UTF-8 charset for HTTP response "charset=UTF-8".
 	CharsetUTF8 = "charset=UTF-8"
 )
 
 var (
-	// ErrContextClosed represents a error that the context is closed
+	// ErrContextClosed represents a error that the context is closed.
 	ErrContextClosed = errors.New("context Closed")
 )
 
@@ -76,7 +76,7 @@ var (
 // , and set the handler as this function argument "handler".
 //
 // The health check server is a http.Server instance, which the port number is read from "config.Server.HealthCheck.Port"
-// , and the handler is as follow - Handle HTTP GET request and always return HTTP Status OK (200) response.
+// , and the handler is as follow - Handle HTTP GET request and always returns HTTP Status OK (200) response.
 func NewServer(opts ...Option) Server {
 	var err error
 
@@ -114,7 +114,7 @@ func NewServer(opts ...Option) Server {
 
 // ListenAndServe returns a error channel, which includes error returned from client sidecar server.
 // This function start both health check and client sidecar server, and the server will close whenever the context receive a Done signal.
-// Whenever the server closed, the client sidecar server will shutdown after a defined duration (cfg.ShutdownDelay), while the health check server will shutdown immediately
+// Whenever the server closed, the client sidecar server will shutdown after a defined duration (cfg.ShutdownDelay), while the health check server will shutdown immediately.
 func (s *server) ListenAndServe(ctx context.Context) chan []error {
 	var (
 		echan = make(chan []error, 1)
@@ -174,7 +174,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 		errs := make([]error, 0, 3)
 		for {
 			select {
-			case <-ctx.Done(): // when context receive done signal, close running servers and return any error
+			case <-ctx.Done(): // when context receive done signal, closes running servers and returns any error
 				s.mu.RLock()
 				if s.hcrunning {
 					glg.Info("Athenz client sidecar health check server will shutdown")
@@ -189,7 +189,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 				echan <- appendErr(errs, ctx.Err())
 				return
 
-			case err := <-sech: // when client sidecar server returns, close running health check server and return any error
+			case err := <-sech: // when client sidecar server returns, closes running health check server and returns any error
 				if err != nil {
 					errs = appendErr(errs, err)
 				}
@@ -203,7 +203,7 @@ func (s *server) ListenAndServe(ctx context.Context) chan []error {
 				echan <- errs
 				return
 
-			case err := <-hech: // when health check server returns, close running client sidecar server and return any error
+			case err := <-hech: // when health check server returns, closes running client sidecar server and returns any error
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -230,7 +230,7 @@ func (s *server) hcShutdown(ctx context.Context) error {
 }
 
 // apiShutdown returns any error when shutdown the client sidecar server.
-// Before shutdown the client sidecar server, it will sleep config.ShutdownDelay to prevent any issue from K8s
+// Before shutdown the client sidecar server, it will sleep config.ShutdownDelay to prevent any issue from K8s.
 func (s *server) apiShutdown(ctx context.Context) error {
 	time.Sleep(s.sdd)
 	sctx, scancel := context.WithTimeout(ctx, s.sdt)
@@ -238,15 +238,15 @@ func (s *server) apiShutdown(ctx context.Context) error {
 	return s.srv.Shutdown(sctx)
 }
 
-// createHealthCheckServiceMux return a *http.ServeMux object
-// The function will register the health check server handler for given pattern, and return
+// createHealthCheckServiceMux returns a *http.ServeMux object.
+// The function will register the health check server handler for given pattern, and return.
 func createHealthCheckServiceMux(pattern string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc(pattern, handleHealthCheckRequest)
 	return mux
 }
 
-// handleHealthCheckRequest is a handler function for and health check request, which always a HTTP Status OK (200) result
+// handleHealthCheckRequest is a handler function for and health check request, which always a HTTP Status OK (200) result.
 func handleHealthCheckRequest(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		w.WriteHeader(http.StatusOK)
@@ -258,7 +258,7 @@ func handleHealthCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// listenAndServeAPI return any error occurred when start a HTTPS server, including any error when loading TLS certificate
+// listenAndServeAPI returns any error occurred when start a HTTPS server, including any error when loading TLS certificate.
 func (s *server) listenAndServeAPI() error {
 	if !s.cfg.TLS.Enable {
 		return s.srv.ListenAndServe()

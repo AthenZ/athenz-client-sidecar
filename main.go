@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Version is set by the build command via LDFLAGS
+// Version is set by the build command via LDFLAGS.
 var Version string
 
 type params struct {

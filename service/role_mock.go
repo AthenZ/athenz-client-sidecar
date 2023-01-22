@@ -18,24 +18,24 @@ package service
 
 import "context"
 
-// RoleService is a mock of RoleService
+// RoleService is a mock of RoleService.
 type RoleServiceMock struct {
 	StartRoleUpdaterFunc      func(context.Context) <-chan error
 	RefreshRoleTokenCacheFunc func(ctx context.Context) <-chan error
 	GetRoleProviderFunc       func() RoleProvider
 }
 
-// StartRoleUpdater is a mock implementation of RoleService.StartRoleUpdater
+// StartRoleUpdater is a mock implementation of RoleService.StartRoleUpdater.
 func (asm *RoleServiceMock) StartRoleUpdater(ctx context.Context) <-chan error {
 	return asm.StartRoleUpdaterFunc(ctx)
 }
 
-// RefreshRoleTokenCache is a mock implementation of RoleService.RefreshRoleTokenCache
+// RefreshRoleTokenCache is a mock implementation of RoleService.RefreshRoleTokenCache.
 func (asm *RoleServiceMock) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 	return asm.RefreshRoleTokenCacheFunc(ctx)
 }
 
-// GetRoleProvider is a mock implementation of RoleService.GetRoleProvider
+// GetRoleProvider is a mock implementation of RoleService.GetRoleProvider.
 func (asm *RoleServiceMock) GetRoleProvider() RoleProvider {
 	return asm.GetRoleProviderFunc()
 }

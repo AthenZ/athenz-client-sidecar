@@ -317,7 +317,7 @@ func GetActualValue(val string) string {
 	return val
 }
 
-// checkPrefixAndSuffix checks if the str has prefix and suffix
+// checkPrefixAndSuffix checks if the str has prefix and suffix.
 func checkPrefixAndSuffix(str, pref, suf string) bool {
 	return strings.HasPrefix(str, pref) && strings.HasSuffix(str, suf)
 }

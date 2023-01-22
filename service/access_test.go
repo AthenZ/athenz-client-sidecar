@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -2370,6 +2371,13 @@ func Test_accessService_getCache(t *testing.T) {
 }
 
 func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
+	wrapRequest := func(method, url string, body io.Reader) *http.Request {
+		r, err := http.NewRequestWithContext(context.Background(), method, url, body)
+		if err != nil {
+			panic(err)
+		}
+		return r
+	}
 	type fields struct {
 		cfg                   config.AccessToken
 		token                 ntokend.TokenProvider
@@ -2410,7 +2418,7 @@ func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
 				q.Add("proxy_for_principal", "dummyProxyForPrincipal")
 				q.Add("expires_in", "1")
 
-				r, _ := http.NewRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
+				r := wrapRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
 				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return r
 			}(),
@@ -2434,7 +2442,7 @@ func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
 				q.Add("proxy_for_principal", "dummyProxyForPrincipal")
 				q.Add("expires_in", "60")
 
-				r, _ := http.NewRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
+				r := wrapRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
 				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return r
 			}(),
@@ -2456,7 +2464,7 @@ func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
 				q.Add("scope", "dummyDomain:dummyRole")
 				q.Add("expires_in", "1")
 
-				r, _ := http.NewRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
+				r := wrapRequest(http.MethodPost, "https://dummyAthenzURL/oauth2/token", strings.NewReader(q.Encode()))
 				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return r
 			}(),
@@ -2472,7 +2480,7 @@ func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
 				tokenCache:            tt.fields.tokenCache,
 				expiry:                tt.fields.expiry,
 			}
-			got, err := a.createPostAccessTokenRequest(tt.args.scope, tt.args.proxyForPrincipal, tt.args.expiry)
+			got, err := a.createPostAccessTokenRequest(context.Background(), tt.args.scope, tt.args.proxyForPrincipal, tt.args.expiry)
 			gotBody, readErr := ioutil.ReadAll(got.Body)
 			if readErr != nil {
 				t.Errorf("createPostAccessTokenRequest() err: %v", err)

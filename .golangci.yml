@@ -28,3 +28,4 @@ linters:
     - dupword
     - godox
     - gomoddirectives
+    - bodyclose

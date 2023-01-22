@@ -32,7 +32,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Tenant represents a client sidecar behavior
+// Tenant represents a client sidecar behavior.
 type Tenant interface {
 	Start(ctx context.Context) chan []error
 }
@@ -161,7 +161,7 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 	return t.server.ListenAndServe(ctx)
 }
 
-// createNtokend returns a TokenService object or any error
+// createNtokend returns a TokenService object or any error.
 func createNtokend(cfg config.NToken) (ntokend.TokenService, error) {
 
 	dur, err := time.ParseDuration(cfg.RefreshPeriod)

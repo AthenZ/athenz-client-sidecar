@@ -73,7 +73,7 @@ func (b *buffer) Put(buf []byte) {
 	b.pool.Put(buf[:0])
 }
 
-// max is copied from math.Max for uint64 type
+// max is copied from math.Max for uint64 type.
 func max(x, y uint64) uint64 {
 	if x > y {
 		return x

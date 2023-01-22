@@ -46,7 +46,7 @@ type AccessService interface {
 	GetAccessProvider() AccessProvider
 }
 
-// accessService represents the implementation of Athenz AccessService
+// accessService represents the implementation of Athenz AccessService.
 type accessService struct {
 	cfg                   config.AccessToken
 	token                 ntokend.TokenProvider
@@ -103,7 +103,7 @@ var (
 )
 
 const (
-	// scopeSeparator is the separator for scope
+	// scopeSeparator is the separator for scope.
 	scopeSeparator = " "
 )
 
@@ -136,7 +136,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 		}
 	}
 
-	// if user set the expiry time and refresh period > expiry time then return error
+	// if user set the expiry time and refresh period > expiry time then returns error
 	if exp != 0 && refreshPeriod > exp {
 		return nil, errors.Wrap(ErrInvalidSetting, "refresh period > token expiry time")
 	}
@@ -295,7 +295,7 @@ func (a *accessService) updateAccessTokenWithRetry(ctx context.Context, domain, 
 }
 
 // updateAccessToken returns AccessTokenResponse struct or error.
-// This function ask Athenz to generate access token and return, or return any error when generating the access token.
+// This function asks Athenz to generate access token and return, or returns any error when generating the access token.
 func (a *accessService) updateAccessToken(ctx context.Context, domain, role, proxyForPrincipal string, expiresIn int64) (*AccessTokenResponse, error) {
 	key := encode(domain, role, proxyForPrincipal)
 	expTimeDelta := fastime.Now().Add(time.Minute)
@@ -325,7 +325,7 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 // fetchAccessToken fetches the access token from Athenz server, and returns the AccessTokenResponse or any error occurred.
-// P.S. Do not call fetchAccessToken() outside singleflight group, as behavior of concurrent request is not tested
+// P.S. Do not call fetchAccessToken() outside singleflight group, as behavior of concurrent request is not tested.
 func (a *accessService) fetchAccessToken(ctx context.Context, domain, role, proxyForPrincipal string, expiry int64) (*AccessTokenResponse, error) {
 	glg.Debugf("get access token, domain: %s, role: %s, proxyForPrincipal: %s, expiry: %d", domain, role, proxyForPrincipal, expiry)
 
@@ -333,7 +333,7 @@ func (a *accessService) fetchAccessToken(ctx context.Context, domain, role, prox
 	glg.Debugf("request access token scope: %v", scope)
 
 	// prepare request object
-	req, err := a.createPostAccessTokenRequest(scope, proxyForPrincipal, expiry)
+	req, err := a.createPostAccessTokenRequest(ctx, scope, proxyForPrincipal, expiry)
 	if err != nil {
 		glg.Debugf("fail to create request object, error: %s", err)
 		return nil, err
@@ -411,7 +411,7 @@ func (a *accessService) getCache(domain, role, principal string) (*AccessTokenRe
 }
 
 // createGetAccessTokenRequest creates Athenz's postAccessTokenRequest.
-func (a *accessService) createPostAccessTokenRequest(scope, proxyForPrincipal string, expiry int64) (*http.Request, error) {
+func (a *accessService) createPostAccessTokenRequest(ctx context.Context, scope, proxyForPrincipal string, expiry int64) (*http.Request, error) {
 	u := fmt.Sprintf("https://%s/oauth2/token", strings.TrimPrefix(strings.TrimPrefix(a.athenzURL, "https://"), "http://"))
 
 	// create URL query
@@ -429,7 +429,7 @@ func (a *accessService) createPostAccessTokenRequest(scope, proxyForPrincipal st
 	}
 
 	// create request
-	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(q.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, strings.NewReader(q.Encode()))
 	if err != nil {
 		glg.Debugf("fail to create request object, error: %s", err)
 		return nil, err
