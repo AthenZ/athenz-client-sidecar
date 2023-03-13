@@ -20,8 +20,8 @@ on:
   # [skip ci], [ci skip], [no ci], [skip actions], or [actions skip]
   # workflows triggered on the push or pull_request events will be skipped.
   # https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
-  pull_request:
-    branches: [ master ]
+  # pull_request:
+  #   branches: [ master ]
 
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
