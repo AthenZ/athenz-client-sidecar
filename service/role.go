@@ -197,6 +197,7 @@ func NewRoleService(cfg config.RoleToken, token ntokend.TokenProvider) (RoleServ
 	var httpClient atomic.Value
 	httpClient.Store(&http.Client{
 		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsConfig,
 		},
 	})
@@ -368,6 +369,7 @@ func (r *roleService) fetchRoleToken(ctx context.Context, domain, role, proxyFor
 		}
 		r.httpClient.Store(&http.Client{
 			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
 				TLSClientConfig: tcc,
 			},
 		})
