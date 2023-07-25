@@ -214,9 +214,11 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          # load: ${{ github.event_name == 'pull_request' }}
+          # push: ${{ github.event_name != 'pull_request' }}
+          # tags: ${{ steps.meta.outputs.tags }}
+          push: true
+          tags: athenz/athenz-client-sidecar:nightly
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
           build-args: |
