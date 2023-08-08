@@ -182,6 +182,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 	var httpClient atomic.Value
 	httpClient.Store(&http.Client{
 		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsConfig,
 		},
 	})
@@ -355,6 +356,7 @@ func (a *accessService) fetchAccessToken(ctx context.Context, domain, role, prox
 		}
 		a.httpClient.Store(&http.Client{
 			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
 				TLSClientConfig: tcc,
 			},
 		})

@@ -25,8 +25,8 @@ on:
 
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
-  DOCKER_REGISTRY_OWNER: athenz
-  GOLANG_VERSION: ^1.18
+  DOCKER_REGISTRY_OWNER: abvaidya
+  GOLANG_VERSION: ^1.20
 
 jobs:
   build:
