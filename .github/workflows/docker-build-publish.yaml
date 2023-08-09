@@ -215,12 +215,12 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          # push: ${{ github.event_name != 'pull_request' }}
-          # load: ${{ github.event_name == 'pull_request' }}
-          # tags: ${{ steps.meta.outputs.tags }}
-          push: true
-          load: false
-          tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # push: true
+          # load: false
+          # tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
           build-args: |
