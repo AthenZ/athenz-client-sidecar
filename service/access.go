@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
@@ -66,11 +67,12 @@ type accessService struct {
 }
 
 type accessCacheData struct {
-	token             *AccessTokenResponse
+	token             string
 	domain            string
 	role              string
 	proxyForPrincipal string
-	expiresIn         int64
+	expiry            int64
+	scope             string
 }
 
 // AccessTokenResponse represents the AccessTokenResponse from postAccessTokenRequest.
@@ -248,7 +250,15 @@ func (a *accessService) getAccessToken(ctx context.Context, domain, role, proxyF
 	if !ok {
 		return a.updateAccessToken(ctx, domain, role, proxyForPrincipal, expiresIn)
 	}
-	return tok, nil
+	expiry_in := int64(time.Unix(tok.expiry, 0).Sub(time.Now()).Seconds())
+	acesstokenResponse := &AccessTokenResponse{
+		AccessToken: tok.token,
+		ExpiresIn:   expiry_in,
+		Scope:       tok.scope,
+		TokenType:   "Bearer",
+	}
+
+	return acesstokenResponse, nil
 }
 
 // RefreshAccessTokenCache returns the error channel when it is updated.
@@ -263,7 +273,7 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 			domain, role, principal := decode(key)
 			cd := val.(*accessCacheData)
 
-			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, cd.expiresIn) {
+			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, cd.expiry) {
 				echan <- err
 			}
 			return true
@@ -307,15 +317,25 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			return nil, e
 		}
 
+		tok, _, err := jwt.NewParser().ParseUnverified(at.AccessToken, &jwt.RegisteredClaims{})
+		if err != nil {
+			return nil, fmt.Errorf("jwt.ParseUnverified() err: %v", err)
+		}
+
+		expTime, err := tok.Claims.GetExpirationTime()
+		if err != nil {
+			return nil, fmt.Errorf("jwt.GetExpirationTime() err: %v", err)
+		}
+
 		a.tokenCache.SetWithExpire(key, &accessCacheData{
-			token:             at,
+			token:             at.AccessToken,
 			domain:            domain,
 			role:              role,
 			proxyForPrincipal: proxyForPrincipal,
-			expiresIn:         expiresIn,
-		}, time.Unix(at.ExpiresIn, 0).Sub(expTimeDelta))
+			expiry:            expTime.Unix(),
+		}, expTime.Sub(expTimeDelta))
 
-		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, at.ExpiresIn)
+		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, expTime.Unix())
 		return at, nil
 	})
 	if err != nil {
@@ -404,12 +424,12 @@ func createScope(domain, role string) string {
 	return domain + ":domain"
 }
 
-func (a *accessService) getCache(domain, role, principal string) (*AccessTokenResponse, bool) {
+func (a *accessService) getCache(domain, role, principal string) (*accessCacheData, bool) {
 	val, ok := a.tokenCache.Get(encode(domain, role, principal))
 	if !ok {
 		return nil, false
 	}
-	return val.(*accessCacheData).token, ok
+	return val.(*accessCacheData), ok
 }
 
 // createGetAccessTokenRequest creates Athenz's postAccessTokenRequest.
