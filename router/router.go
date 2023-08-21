@@ -30,7 +30,7 @@ import (
 	"github.com/kpango/glg"
 )
 
-//New returns Routed ServeMux
+// New returns Routed ServeMux.
 func New(cfg config.Config, h handler.Handler) *http.ServeMux {
 
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 32

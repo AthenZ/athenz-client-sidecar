@@ -18,24 +18,24 @@ package service
 
 import "context"
 
-// AccessService is a mock of AccessService
+// AccessService is a mock of AccessService.
 type AccessServiceMock struct {
 	StartAccessUpdaterFunc      func(context.Context) <-chan error
 	RefreshAccessTokenCacheFunc func(ctx context.Context) <-chan error
 	GetAccessProviderFunc       func() AccessProvider
 }
 
-// StartAccessUpdater is a mock implementation of AccessService.StartAccessUpdater
+// StartAccessUpdater is a mock implementation of AccessService.StartAccessUpdater.
 func (asm *AccessServiceMock) StartAccessUpdater(ctx context.Context) <-chan error {
 	return asm.StartAccessUpdaterFunc(ctx)
 }
 
-// RefreshAccessTokenCache is a mock implementation of AccessService.RefreshAccessTokenCache
+// RefreshAccessTokenCache is a mock implementation of AccessService.RefreshAccessTokenCache.
 func (asm *AccessServiceMock) RefreshAccessTokenCache(ctx context.Context) <-chan error {
 	return asm.RefreshAccessTokenCacheFunc(ctx)
 }
 
-// GetAccessProvider is a mock implementation of AccessService.GetAccessProvider
+// GetAccessProvider is a mock implementation of AccessService.GetAccessProvider.
 func (asm *AccessServiceMock) GetAccessProvider() AccessProvider {
 	return asm.GetAccessProviderFunc()
 }

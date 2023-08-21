@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -2434,6 +2434,13 @@ func Test_decode(t *testing.T) {
 }
 
 func Test_createGetRoleTokenRequest(t *testing.T) {
+	wrapRequest := func(method, url string, body io.Reader) *http.Request {
+		r, err := http.NewRequestWithContext(context.Background(), method, url, body)
+		if err != nil {
+			panic(err)
+		}
+		return r
+	}
 	type fields struct {
 		cfg                   config.RoleToken
 		token                 ntokend.TokenProvider
@@ -2472,7 +2479,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				athenzPrincipleHeader: "dummyHeader",
 			},
 			want: func() *http.Request {
-				r, _ := http.NewRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
+				r := wrapRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
 
 				return r
 			}(),
@@ -2492,7 +2499,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				expiry:                time.Minute,
 			},
 			want: func() *http.Request {
-				r, _ := http.NewRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=60&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
+				r := wrapRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=60&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
 
 				return r
 			}(),
@@ -2512,7 +2519,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				expiry:                60,
 			},
 			want: func() *http.Request {
-				r, _ := http.NewRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?minExpiryTime=1&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
+				r := wrapRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?minExpiryTime=1&proxyForPrincipal=dummyProxyForPrincipal&role=dummyRole", nil)
 
 				return r
 			}(),
@@ -2531,7 +2538,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				athenzPrincipleHeader: "dummyHeader",
 			},
 			want: func() *http.Request {
-				r, _ := http.NewRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1&role=dummyRole", nil)
+				r := wrapRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1&role=dummyRole", nil)
 
 				return r
 			}(),
@@ -2549,7 +2556,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				athenzPrincipleHeader: "dummyHeader",
 			},
 			want: func() *http.Request {
-				r, _ := http.NewRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1", nil)
+				r := wrapRequest(http.MethodGet, "https://dummyAthenzURL/domain/dummyDomain/token?maxExpiryTime=1&minExpiryTime=1", nil)
 
 				return r
 			}(),
@@ -2565,7 +2572,7 @@ func Test_createGetRoleTokenRequest(t *testing.T) {
 				domainRoleCache:       tt.fields.domainRoleCache,
 				expiry:                tt.fields.expiry,
 			}
-			got, err := r.createGetRoleTokenRequest(tt.args.domain, tt.args.role, tt.args.minExpiry, tt.args.maxExpiry, tt.args.proxyForPrincipal)
+			got, err := r.createGetRoleTokenRequest(context.Background(), tt.args.domain, tt.args.role, tt.args.minExpiry, tt.args.maxExpiry, tt.args.proxyForPrincipal)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createGetRoleTokenRequest(), got: %+v, want: %+v", got, tt.want)
 			}

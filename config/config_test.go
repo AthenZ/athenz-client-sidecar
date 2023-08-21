@@ -97,7 +97,7 @@ func TestNew(t *testing.T) {
 					AthenzCAPath:        "_athenz_root_ca_",
 					CertPath:            "_client_cert_path_",
 					CertKeyPath:         "_client_cert_key_path_",
-					Expiry:              "30m",
+					RefreshPeriod:       "30m",
 				},
 				RoleToken: RoleToken{
 					Enable:              true,
@@ -106,7 +106,7 @@ func TestNew(t *testing.T) {
 					AthenzCAPath:        "_athenz_root_ca_",
 					CertPath:            "_client_cert_path_",
 					CertKeyPath:         "_client_cert_key_path_",
-					Expiry:              "30m",
+					RefreshPeriod:       "30m",
 				},
 				Proxy: Proxy{
 					Enable:              true,

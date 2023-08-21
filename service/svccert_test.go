@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -683,7 +683,7 @@ func TestSvcCertService_GetSvcCertProvider(t *testing.T) {
 	}
 }
 
-// mockTransporter is the mock of RoundTripper
+// mockTransporter is the mock of RoundTripper.
 type mockTransporter struct {
 	StatusCode int
 	Body       [][]byte
@@ -693,7 +693,7 @@ type mockTransporter struct {
 	Counter    int
 }
 
-// RoundTrip is used to create a mock http response
+// RoundTrip is used to create a mock http response.
 func (m *mockTransporter) RoundTrip(req *http.Request) (*http.Response, error) {
 	m.Counter = m.Counter + 1
 	res := &http.Response{
@@ -1370,7 +1370,7 @@ func TestSvcCertService_RefreshSvcCert(t *testing.T) {
 			svcCertService.client.Transport = transpoter
 
 			return test{
-				name:           "RefreshSvcCert fail when recieved cert is invalid",
+				name:           "RefreshSvcCert fail when receieved cert is invalid",
 				svcCertService: svcCertService,
 				want:           nil,
 				wantErr:        ErrInvalidCert,

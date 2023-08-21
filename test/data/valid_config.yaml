@@ -32,8 +32,8 @@ accessToken:
   athenzCAPath: _athenz_root_ca_
   certPath: _client_cert_path_
   certKeyPath: _client_cert_key_path_
-  expiry: "30m"
-  refreshPeriod: ""
+  expiry: ""
+  refreshPeriod: "30m"
   retry:
     attempts: 0
     delay: ""
@@ -44,8 +44,8 @@ roleToken:
   athenzCAPath: _athenz_root_ca_
   certPath: _client_cert_path_
   certKeyPath: _client_cert_key_path_
-  expiry: "30m"
-  refreshPeriod: ""
+  expiry: ""
+  refreshPeriod: "30m"
   retry:
     attempts: 0
     delay: ""

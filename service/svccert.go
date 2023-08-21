@@ -50,10 +50,10 @@ var (
 	// defaultSvcCertExpiryMargin represents the default value of ExpiryMargin.
 	defaultSvcCertExpiryMargin = time.Hour * 24 * 10
 
-	// defaultSvcCertExpiry represents the default value of Expiry
+	// defaultSvcCertExpiry represents the default value of Expiry.
 	defaultSvcCertExpiry int32
 
-	// domainReg is used to parse the Athenz domain which is contained in config
+	// domainReg is used to parse the Athenz domain which is contained in config.
 	domainReg = regexp.MustCompile(`^([a-zA-Z0-9_][a-zA-Z0-9_-]*\.)*[a-zA-Z0-9_][a-zA-Z0-9_-]*$`)
 
 	// ErrCertNotFound represents an error when failed to fetch the svccert from SvcCertProvider.
@@ -68,7 +68,7 @@ var (
 	// ErrFailedToInitialize represents an error when failed to initialize a service.
 	ErrFailedToInitialize = errors.New("Failed to initialize a service")
 
-	// ErrInvalidParameter represents an error when the invalid parameter is contained in config
+	// ErrInvalidParameter represents an error when the invalid parameter is contained in config.
 	ErrInvalidParameter = errors.New("Invalid parameter")
 )
 
@@ -95,7 +95,7 @@ type certCache struct {
 	exp  time.Time
 }
 
-// svcCertService represents the implementation of Athenz RoleService
+// svcCertService represents the implementation of Athenz RoleService.
 type svcCertService struct {
 	cfg             config.ServiceCert
 	token           ntokend.TokenProvider
@@ -357,16 +357,16 @@ func (s *svcCertService) GetSvcCertProvider() SvcCertProvider {
 	return s.getSvcCert
 }
 
-// getSvcCert return a token string or error
+// getSvcCert returns a token string or error
 // This function is thread-safe. This function will return the svccert stored in the atomic variable,
-// or return the error when the svccert is not initialized or cannot be generated
+// or return the error when the svccert is not initialized or cannot be generated.
 func (s *svcCertService) getSvcCert() ([]byte, error) {
 	cache := s.certCache.Load().(certCache)
 
 	if cache.cert == nil || cache.exp.Before(fastime.Now()) {
 		cert, err := s.RefreshSvcCert()
 		if err != nil {
-			//  NOTE: When RefreshSvcCert is failed, return the cached certificate if it is not expired
+			//  NOTE: When RefreshSvcCert is failed, returns the cached certificate if it is not expired
 			if cache.cert != nil && cache.exp.Add(s.expireMargin).After(fastime.Now()) {
 				glg.Warn("Cached certificate is not expired. Return from cache. Error: " + err.Error())
 				return cache.cert, nil
