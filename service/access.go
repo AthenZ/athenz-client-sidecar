@@ -250,15 +250,17 @@ func (a *accessService) getAccessToken(ctx context.Context, domain, role, proxyF
 	if !ok {
 		return a.updateAccessToken(ctx, domain, role, proxyForPrincipal, expiresIn)
 	}
-	expiry_in := int64(time.Unix(tok.expiry, 0).Sub(time.Now()).Seconds())
-	acesstokenResponse := &AccessTokenResponse{
+	// token_type is hardcoded in SIA. Because zts server hardcode token_type
+	atResponse := &AccessTokenResponse{
 		AccessToken: tok.token,
-		ExpiresIn:   expiry_in,
-		Scope:       tok.scope,
-		TokenType:   "Bearer",
+		ExpiresIn:   int64(time.Unix(tok.expiry, 0).Sub(time.Now()).Seconds()),
+		TokenType:   "Bearer", // hardcoded in the same way as ZTS, https://github.com/AthenZ/athenz/blob/a85f48666763759ee28fda114acc4c8d2cafc28e/servers/zts/src/main/java/com/yahoo/athenz/zts/ZTSImpl.java#L2656C10-L2656C10
+	}
+	if tok.scope != "" {
+		atResponse.Scope = tok.scope // set scope ONLY when non-nil & non-empty, https://github.com/AthenZ/athenz/blob/a85f48666763759ee28fda114acc4c8d2cafc28e/core/zts/src/main/java/com/yahoo/athenz/zts/AccessTokenResponse.java#L21C14-L21C14
 	}
 
-	return acesstokenResponse, nil
+	return atResponse, nil
 }
 
 // RefreshAccessTokenCache returns the error channel when it is updated.
