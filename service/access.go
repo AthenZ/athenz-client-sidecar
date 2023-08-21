@@ -167,7 +167,6 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 			return nil, errors.Wrap(ErrInvalidSetting, err.Error())
 		}
 	}
-
 	certPath := cfg.CertPath
 	certKeyPath := cfg.CertKeyPath
 	// prevent using client certificate (ntoken has priority)
@@ -273,9 +272,8 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 
 		a.tokenCache.Foreach(ctx, func(key string, val interface{}, exp int64) bool {
 			domain, role, principal := decode(key)
-			cd := val.(*accessCacheData)
 
-			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, cd.expiry) {
+			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, int64(a.expiry)) {
 				echan <- err
 			}
 			return true
