@@ -334,6 +334,7 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			domain:            domain,
 			role:              role,
 			proxyForPrincipal: proxyForPrincipal,
+			expiresIn:         expiresIn,
 			expiry:            expTime.Unix(),
 		}, expTime.Sub(expTimeDelta))
 

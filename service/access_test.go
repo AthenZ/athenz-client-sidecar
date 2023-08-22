@@ -1840,8 +1840,8 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				fmt.Errorf("Failed to make access token: %v", err)
 			}
 			dummyExpTime := fastime.Now().Add(time.Hour).UTC()
-			dummyExpiriesIn := int64(3600)
-			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiriesIn)
+			dummyExpiresIn := int64(3600)
+			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiresIn)
 
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprint(w, dummyToken)
@@ -1892,12 +1892,12 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			dummyExpTime := fastime.Now().Add(time.Hour).UTC()
-			dummyExpiriesIn := int64(3600)
-			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpiriesIn)
+			dummyExpiresIn := int64(3600)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpiresIn)
 			if err != nil {
 				fmt.Errorf("Failed to make access token: %v", err)
 			}
-			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiriesIn)
+			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiresIn)
 
 			// create a dummy server that returns a dummy token
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
