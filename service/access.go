@@ -71,8 +71,9 @@ type accessCacheData struct {
 	domain            string
 	role              string
 	proxyForPrincipal string
-	expiry            int64
-	scope             string
+	expiresIn         int64  // cache user request parameter
+	expiry            int64  // cache ZTS response
+	scope             string // cache ZTS response
 }
 
 // AccessTokenResponse represents the AccessTokenResponse from postAccessTokenRequest.
@@ -246,17 +247,17 @@ func (a *accessService) GetAccessProvider() AccessProvider {
 // getAccessToken returns AccessTokenResponse struct or error.
 // This function will return the access token stored inside the cache, or fetch the access token from Athenz when corresponding access token cannot be found in the cache.
 func (a *accessService) getAccessToken(ctx context.Context, domain, role, proxyForPrincipal string, expiresIn int64) (*AccessTokenResponse, error) {
-	tok, ok := a.getCache(domain, role, proxyForPrincipal)
+	cd, ok := a.getCache(domain, role, proxyForPrincipal)
 	if !ok {
 		return a.updateAccessToken(ctx, domain, role, proxyForPrincipal, expiresIn)
 	}
 	atResponse := &AccessTokenResponse{
-		AccessToken: tok.token,
-		ExpiresIn:   int64(time.Unix(tok.expiry, 0).Sub(time.Now()).Seconds()),
+		AccessToken: cd.token,
+		ExpiresIn:   int64(time.Unix(cd.expiry, 0).Sub(time.Now()).Seconds()),
 		TokenType:   "Bearer", // hardcoded in the same way as ZTS, https://github.com/AthenZ/athenz/blob/a85f48666763759ee28fda114acc4c8d2cafc28e/servers/zts/src/main/java/com/yahoo/athenz/zts/ZTSImpl.java#L2656C10-L2656C10
 	}
-	if tok.scope != "" {
-		atResponse.Scope = tok.scope // set scope ONLY when non-nil & non-empty, https://github.com/AthenZ/athenz/blob/a85f48666763759ee28fda114acc4c8d2cafc28e/core/zts/src/main/java/com/yahoo/athenz/zts/AccessTokenResponse.java#L21C14-L21C14
+	if cd.scope != "" {
+		atResponse.Scope = cd.scope // set scope ONLY when non-nil & non-empty, https://github.com/AthenZ/athenz/blob/a85f48666763759ee28fda114acc4c8d2cafc28e/core/zts/src/main/java/com/yahoo/athenz/zts/AccessTokenResponse.java#L21C14-L21C14
 	}
 
 	return atResponse, nil
@@ -272,8 +273,9 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 
 		a.tokenCache.Foreach(ctx, func(key string, val interface{}, exp int64) bool {
 			domain, role, principal := decode(key)
+			cd := val.(*accessCacheData)
 
-			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, int64(a.expiry)) {
+			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, cd.expiresIn) {
 				echan <- err
 			}
 			return true
