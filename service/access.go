@@ -167,6 +167,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 			return nil, errors.Wrap(ErrInvalidSetting, err.Error())
 		}
 	}
+
 	certPath := cfg.CertPath
 	certKeyPath := cfg.CertKeyPath
 	// prevent using client certificate (ntoken has priority)
@@ -249,7 +250,6 @@ func (a *accessService) getAccessToken(ctx context.Context, domain, role, proxyF
 	if !ok {
 		return a.updateAccessToken(ctx, domain, role, proxyForPrincipal, expiresIn)
 	}
-	// token_type is hardcoded in SIA. Because zts server hardcode token_type
 	atResponse := &AccessTokenResponse{
 		AccessToken: tok.token,
 		ExpiresIn:   int64(time.Unix(tok.expiry, 0).Sub(time.Now()).Seconds()),

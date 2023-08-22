@@ -6,7 +6,6 @@ replace github.com/AthenZ/athenz => github.com/AthenZ/athenz v1.11.32
 
 require (
 	github.com/AthenZ/athenz v1.11.32
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/kpango/fastime v1.1.9
 	github.com/kpango/gache v1.2.8
