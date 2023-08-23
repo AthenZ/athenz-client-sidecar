@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,11 +31,38 @@ import (
 	"time"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
 )
+
+func makeAccessTokenImpl(domain string, role string, expiry int64) (string, error) {
+	header := map[string]interface{}{
+		"kid": "0",
+		"typ": "at+jwt",
+		"alg": "RS256",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+		"iat":       time.Now().Unix(),
+		"exp":       time.Now().Add(time.Duration(expiry) * time.Second).Unix(),
+		"iss":       "https://zts.athenz.yahoo.co.jp:4443/",
+		"aud":       domain,
+		"auth_time": time.Now().Unix(),
+		"scope":     role,
+	})
+
+	token.Header = header
+
+	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
 
 func TestNewAccessService(t *testing.T) {
 	type args struct {
@@ -517,23 +544,25 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			dummyExpTime := int64(1)
-			dummyToken := "dummyToken"
-			dummyAccessToken := &AccessTokenResponse{
-				AccessToken: dummyToken,
-				ExpiresIn:   dummyExpTime,
+			dummyExpiry := int64(1)
+			dummyToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpiry)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
 			}
-
 			tokenCache := gache.New()
 			tokenCache.SetWithExpire("dummyDomain;dummyRole", &accessCacheData{
-				token: dummyAccessToken,
+				token: dummyToken,
 			}, time.Minute)
 
 			// create dummy server to mock the updateAccessToken
-			dummyToken2 := `{"access_token":"dummyToken2","token_type":"Bearer","expires_in":1000,"scope":"dummyDomain2:dummyRole2"}"`
+			dummyToken2, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpiry)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprint(w, dummyToken2)
+				dummyToken2Response := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":%d}"`, dummyToken2, dummyExpiry)
+				fmt.Fprint(w, dummyToken2Response)
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
@@ -584,14 +613,22 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "newToken"
+			dummyExpriesIn := int64(60)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpriesIn)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
+			dummyTok2, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpriesIn)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			i := 0
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if i < 3 {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
-					newToken := `{"access_token":"newToken","token_type":"Bearer","expires_in":1000,"scope":"dummyDomain:dummyRole"}"`
-					fmt.Fprint(w, newToken)
+					newTokenResponse := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","scope":"dummyDomain:dummyRole","expires_in":%d}"`, dummyTok, dummyExpriesIn)
+					fmt.Fprint(w, newTokenResponse)
 				}
 				i++
 			})
@@ -599,11 +636,11 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 
 			tokenCache := gache.New()
 			data := &accessCacheData{
-				token:             nil,
+				token:             dummyTok2,
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "dummyProxy",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
 
@@ -657,7 +694,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -666,7 +703,10 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "newToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			})
@@ -674,14 +714,11 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 
 			tokenCache := gache.New()
 			data := &accessCacheData{
-				token: &AccessTokenResponse{
-					AccessToken: dummyTok,
-					ExpiresIn:   int64(99999999),
-				},
+				token:             dummyTok,
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "dummyProxy",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
 
@@ -736,7 +773,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -828,8 +865,11 @@ func Test_accessService_getAccessToken(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			dummyTok := "dummyToken"
 			dummyExpTime := int64(999999999)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpTime)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -903,17 +943,19 @@ func Test_accessService_getAccessToken(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
 			dummyExpTime := int64(999999999)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpTime)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyAccessToken := &AccessTokenResponse{
 				AccessToken: dummyTok,
 				TokenType:   "Bearer",
-				Scope:       "dummyDomain:dummyRole",
 				ExpiresIn:   dummyExpTime,
 			}
 			gac := gache.New()
 			gac.Set("dummyDomain;dummyRole;dummyProxy", &accessCacheData{
-				token: dummyAccessToken,
+				token: dummyTok,
 			})
 
 			return test{
@@ -961,8 +1003,10 @@ func Test_accessService_getAccessToken(t *testing.T) {
 				}
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("accessService.getAccessToken() = %v, want %v", got, tt.want)
+			if got != nil && tt.want != nil {
+				if got.AccessToken != tt.want.AccessToken {
+					t.Errorf("accessService.getAccessToken().AccessToken = %v, want %v", got.AccessToken, tt.want.AccessToken)
+				}
 			}
 		})
 	}
@@ -994,18 +1038,26 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 	tests := []test{
 		func() test {
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				newToken := `{"access_token":"newToken","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`
-				fmt.Fprint(w, newToken)
+				newToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+				if err != nil {
+					fmt.Errorf("Failed to make access token: %v", err)
+				}
+				newTokenResponse := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`, newToken)
+				fmt.Fprint(w, newTokenResponse)
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
 			tokenCache := gache.New()
+			dummyToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			data := &accessCacheData{
-				token:             nil,
+				token:             dummyToken,
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole", data, time.Minute)
 
@@ -1040,10 +1092,10 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 					}
 
 					tok := newCache.(*accessCacheData).token
-					if tok == nil {
+					if tok == "" {
 						return errors.New("updated token is nil")
 					}
-					if tok.AccessToken != "newToken" {
+					if tok != dummyToken {
 						return errors.New("new token not updated")
 					}
 
@@ -1052,28 +1104,36 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			}
 		}(),
 		func() test {
+			var (
+				newToken string
+				err      error
+			)
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				newToken := `{"access_token":"newToken","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`
-				fmt.Fprint(w, newToken)
+				newToken, err = makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+				if err != nil {
+					fmt.Errorf("Failed to make access token: %v", err)
+				}
+				newTokenResponse := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`, newToken)
+				fmt.Fprint(w, newTokenResponse)
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
 			tokenCache := gache.New()
 			data := &accessCacheData{
-				token:             nil,
+				token:             "",
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole", data, time.Minute)
 
 			data1 := &accessCacheData{
-				token:             nil,
+				token:             "",
 				domain:            "dummyDomain1",
 				role:              "dummyRole1",
 				proxyForPrincipal: "",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain1;dummyRole1", data1, time.Minute)
 
@@ -1109,10 +1169,10 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						}
 
 						tok := newCache.(*accessCacheData).token
-						if tok == nil {
+						if tok == "" {
 							return errors.New("updated token is nil")
 						}
-						if tok.AccessToken != "newToken" {
+						if tok != newToken {
 							return errors.New("new token not updated")
 						}
 						return nil
@@ -1130,14 +1190,21 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "newToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			i := 0
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if i < 3 {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
-					newToken := `{"access_token":"newToken","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`
-					fmt.Fprint(w, newToken)
+					newToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+					if err != nil {
+						fmt.Errorf("Failed to make access token: %v", err)
+					}
+					newTokenResponse := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`, newToken)
+					fmt.Fprint(w, newTokenResponse)
 				}
 				i++
 			})
@@ -1145,11 +1212,11 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 
 			tokenCache := gache.New()
 			data := &accessCacheData{
-				token:             nil,
+				token:             dummyTok,
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "dummyProxy",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
 
@@ -1193,7 +1260,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1206,7 +1273,10 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "newToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			})
@@ -1214,16 +1284,12 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 
 			tokenCache := gache.New()
 			data := &accessCacheData{
-				token: &AccessTokenResponse{
-					AccessToken: dummyTok,
-					TokenType:   "Bearer",
-					Scope:       "dummyDomain:dummyRole",
-					ExpiresIn:   int64(99999999),
-				},
+				token:             dummyTok,
 				domain:            "dummyDomain",
 				role:              "dummyRole",
 				proxyForPrincipal: "dummyProxy",
-				expiresIn:         60,
+				expiry:            time.Now().Add(60 * time.Second).Unix(),
+				scope:             "dummyDomain:dummyRole",
 			}
 			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
 
@@ -1268,7 +1334,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1340,7 +1406,10 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := int64(999999999)
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
@@ -1381,7 +1450,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 						return errors.New("token is not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1394,7 +1463,10 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := int64(999999999)
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
@@ -1454,7 +1526,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 						return errors.New("token is not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1467,7 +1539,10 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyToken := "tok"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			// create a dummy server that returns a dummy token
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -1484,7 +1559,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 					httpClient: httpClient,
 					tokenCache: tokenCache,
 					token: func() (string, error) {
-						return dummyToken, nil
+						return dummyTok, nil
 					},
 					athenzURL:             dummyServer.URL,
 					athenzPrincipleHeader: "Athenz-Principal",
@@ -1579,7 +1654,10 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := int64(999999999)
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
@@ -1644,7 +1722,10 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := int64(999999999)
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
@@ -1677,7 +1758,10 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := int64(999999999)
 			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime)
 
@@ -1714,10 +1798,12 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyToken := "dummyToken"
-
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprint(w, dummyToken)
+				fmt.Fprint(w, dummyTok)
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
@@ -1729,7 +1815,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					httpClient: httpClient,
 					tokenCache: gache.New(),
 					token: func() (string, error) {
-						return dummyToken, nil
+						return dummyTok, nil
 					},
 					athenzURL:             dummyServer.URL,
 					athenzPrincipleHeader: "Athenz-Principal",
@@ -1745,13 +1831,17 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					dummyServer.Close()
 					return nil
 				},
-				wantErr: fmt.Errorf("invalid character 'd' looking for beginning of value"),
+				wantErr: fmt.Errorf("invalid character 'e' looking for beginning of value"),
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 3600)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 			dummyExpTime := fastime.Now().Add(time.Hour).UTC()
-			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime.Unix())
+			dummyExpiresIn := int64(3600)
+			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiresIn)
 
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprint(w, dummyToken)
@@ -1785,10 +1875,9 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					if !ok {
 						return fmt.Errorf("element cannot found in cache")
 					}
-					if c.(*accessCacheData).token.AccessToken != dummyTok {
+					if c.(*accessCacheData).token != dummyTok {
 						return fmt.Errorf("token not matched, got: %v, want: %v", c, dummyTok)
 					}
-
 					if math.Abs(time.Unix(0, exp).Sub(dummyExpTime).Seconds()) > (time.Minute+(time.Second*3)).Seconds()*3 {
 						return errors.Errorf("cache expiry not match with policy expires, got: %d", exp)
 					}
@@ -1802,9 +1891,13 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
 			dummyExpTime := fastime.Now().Add(time.Hour).UTC()
-			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpTime.Unix())
+			dummyExpiresIn := int64(3600)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpiresIn)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
+			dummyToken := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok, dummyExpiresIn)
 
 			// create a dummy server that returns a dummy token
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1815,16 +1908,13 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			tokenCache := gache.New()
 
 			// set another dummy token and see if it is updated
-			dummyTok2 := "dummyToken2"
-			dummyToken2 := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok2, dummyExpTime.Unix())
-			dummyAccessToke2 := &AccessTokenResponse{
-				AccessToken: dummyToken2,
-				TokenType:   "Bearer",
-				Scope:       "dummyDomain:dummyRole",
-				ExpiresIn:   dummyExpTime.UnixNano() / int64(time.Second),
+			dummyTok2, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
 			}
+			dummyToken2 := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok2, dummyExpTime.Unix())
 			tokenCache.SetWithExpire("dummyDomain;dummyRole", &accessCacheData{
-				token: dummyAccessToke2,
+				token: dummyToken2,
 			}, time.Second)
 
 			var httpClient atomic.Value
@@ -1852,7 +1942,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					if !ok {
 						return fmt.Errorf("element cannot found in cache")
 					}
-					if tok.(*accessCacheData).token.AccessToken != dummyTok {
+					if tok.(*accessCacheData).token != dummyTok {
 						return fmt.Errorf("Token not updated")
 					}
 
@@ -2297,7 +2387,7 @@ func Test_accessService_getCache(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *AccessTokenResponse
+		want   *accessCacheData
 		want1  bool
 	}
 	tests := []test{
@@ -2317,20 +2407,25 @@ func Test_accessService_getCache(t *testing.T) {
 			}
 		}(),
 		func() test {
-			dummyTok := "dummyToken"
 			dummyExpTime := int64(999999999)
-			dummyToken := fmt.Sprintf(`{"token":"%v", "expiryTime": %v}`, dummyTok, dummyExpTime)
+			dummyTok, err := makeAccessTokenImpl("dummyDomain", "dummyRole", dummyExpTime)
+			if err != nil {
+				fmt.Errorf("Failed to make access token: %v", err)
+			}
 
-			accessToken := &AccessTokenResponse{
-				AccessToken: dummyToken,
-				TokenType:   "Bearer",
-				Scope:       "dummyDomain:dummyRole",
-				ExpiresIn:   dummyExpTime,
+			accessTokenCache := &accessCacheData{
+				token:  dummyTok,
+				expiry: dummyExpTime,
+				domain: "dummyDomain",
+				role:   "dummyRole",
 			}
 
 			tokenCache := gache.New()
 			tokenCache.Set("dummyDomain;dummyRole;principal", &accessCacheData{
-				token: accessToken,
+				token:  dummyTok,
+				expiry: dummyExpTime,
+				domain: "dummyDomain",
+				role:   "dummyRole",
 			})
 
 			return test{
@@ -2343,7 +2438,7 @@ func Test_accessService_getCache(t *testing.T) {
 					role:      "dummyRole",
 					principal: "principal",
 				},
-				want:  accessToken,
+				want:  accessTokenCache,
 				want1: true,
 			}
 		}(),
