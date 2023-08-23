@@ -336,6 +336,7 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			proxyForPrincipal: proxyForPrincipal,
 			expiresIn:         expiresIn,
 			expiry:            expTime.Unix(),
+			scope:             at.Scope,
 		}, expTime.Sub(expTimeDelta))
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, expTime.Unix())
