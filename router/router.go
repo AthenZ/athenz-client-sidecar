@@ -76,7 +76,10 @@ func routing(m []string, t time.Duration, h handler.Func) http.Handler {
 						}
 						return
 					case <-ctx.Done():
-						http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+						http.Error(w,
+							fmt.Sprintf("Error: Handler Time Out by server.timeout\t%s",
+								http.StatusText(http.StatusServiceUnavailable)),
+							http.StatusServiceUnavailable)
 						glg.Errorf("Handler Time Out: %v", time.Since(start))
 						return
 					}
