@@ -30,7 +30,7 @@ import (
 	"github.com/kpango/glg"
 )
 
-//New returns Routed ServeMux
+// New returns Routed ServeMux
 func New(cfg config.Config, h handler.Handler) *http.ServeMux {
 
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 32
@@ -76,6 +76,10 @@ func routing(m []string, t time.Duration, h handler.Func) http.Handler {
 						}
 						return
 					case <-ctx.Done():
+						http.Error(w,
+							fmt.Sprintf("Error: Handler Time Out by server.timeout\t%s",
+								http.StatusText(http.StatusServiceUnavailable)),
+							http.StatusServiceUnavailable)
 						glg.Errorf("Handler Time Out: %v", time.Since(start))
 						return
 					}
