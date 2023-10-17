@@ -1103,15 +1103,11 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			}
 		}(),
 		func() test {
-			var (
-				newToken string
-				err      error
-			)
+			newToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
+			if err != nil {
+				panic(fmt.Errorf("Failed to make access token: %v", err))
+			}
 			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				newToken, err = makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
-				if err != nil {
-					fmt.Errorf("Failed to make access token: %v", err)
-				}
 				newTokenResponse := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":99999,"scope":"dummyDomain:dummyRole"}"`, newToken)
 				fmt.Fprint(w, newTokenResponse)
 			})
