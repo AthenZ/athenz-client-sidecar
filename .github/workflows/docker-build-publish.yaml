@@ -27,7 +27,6 @@ env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
   DOCKER_REGISTRY_OWNER: athenz
   DOCKER_REGISTRY_USER: abvaidya
-  GOLANG_VERSION: ^1.20
 
 jobs:
   build:
@@ -85,23 +84,11 @@ jobs:
         id: setup-go
         # You may pin to the exact commit or the version.
         # uses: https://github.com/actions/setup-go/tags
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GOLANG_VERSION }}
-
-      # This action allows caching dependencies and build outputs to improve workflow execution time.
-      # https://github.com/actions/cache
-      -
-        name: Cache Go Modules
-        id: cache-go
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: "stable"
+          go-version-file: './go.mod'
+          cache: true
 
       # A GitHub Action for golang tests
       -
