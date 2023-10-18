@@ -12,30 +12,28 @@
 <!-- TOC insertAnchor:false -->
 
 - [What is Athenz client sidecar](#what-is-athenz-client-sidecar)
-    - [Get Athenz N-token from client sidecar](#get-athenz-n-token-from-client-sidecar)
-    - [Get Athenz Access Token from client sidecar](#get-athenz-access-token-from-client-sidecar)
-    - [Get Athenz Role Token from client sidecar](#get-athenz-role-token-from-client-sidecar)
-    - [Proxy HTTP request (add corresponding Athenz authorization token)](#proxy-http-request-add-corresponding-athenz-authorization-token)
+  - [Get Athenz N-token from client sidecar](#get-athenz-n-token-from-client-sidecar)
+  - [Get Athenz Access Token from client sidecar](#get-athenz-access-token-from-client-sidecar)
+  - [Get Athenz Role Token from client sidecar](#get-athenz-role-token-from-client-sidecar)
+  - [Proxy HTTP request (add corresponding Athenz authorization token)](#proxy-http-request-add-corresponding-athenz-authorization-token)
 - [Use Case](#use-case)
 - [Specification](#specification)
-    - [Get N-token from Athenz through client sidecar](#get-n-token-from-athenz-through-client-sidecar)
-    - [Get access token from Athenz through client sidecar](#get-access-token-from-athenz-through-client-sidecar)
-    - [Get role token from Athenz through client sidecar](#get-role-token-from-athenz-through-client-sidecar)
-    - [Get service certificate from Athenz through client sidecar](#get-service-certificate-from-athenz-through-client-sidecar)
-    - [Proxy requests and append N-token authentication header](#proxy-requests-and-append-n-token-authentication-header)
-    - [Proxy requests and append role token authentication header](#proxy-requests-and-append-role-token-authentication-header)
+  - [Get N-token from Athenz through client sidecar](#get-n-token-from-athenz-through-client-sidecar)
+  - [Get access token from Athenz through client sidecar](#get-access-token-from-athenz-through-client-sidecar)
+  - [Get role token from Athenz through client sidecar](#get-role-token-from-athenz-through-client-sidecar)
+  - [Get service certificate from Athenz through client sidecar](#get-service-certificate-from-athenz-through-client-sidecar)
+  - [Proxy requests and append N-token authentication header](#proxy-requests-and-append-n-token-authentication-header)
+  - [Proxy requests and append role token authentication header](#proxy-requests-and-append-role-token-authentication-header)
 - [Configuration](#configuration)
 - [Developer Guide](#developer-guide)
-    - [Example code](#example-code)
-        - [Get N-token from client sidecar](#get-n-token-from-client-sidecar)
-        - [Get access token from client sidecar](#get-access-token-from-client-sidecar)
-        - [Get role token from client sidecar](#get-role-token-from-client-sidecar)
-        - [Get service certificate from client sidecar](#get-service-certificate-from-client-sidecar)
-        - [Proxy request through client sidecar (append N-token)](#proxy-request-through-client-sidecar-append-n-token)
-        - [Proxy request through client sidecar (append role token)](#proxy-request-through-client-sidecar-append-role-token)
+  - [Example code](#example-code)
+    - [Get N-token from client sidecar](#get-n-token-from-client-sidecar)
+    - [Get access token from client sidecar](#get-access-token-from-client-sidecar)
+    - [Get role token from client sidecar](#get-role-token-from-client-sidecar)
+    - [Get service certificate from client sidecar](#get-service-certificate-from-client-sidecar)
+    - [Proxy request through client sidecar (append N-token)](#proxy-request-through-client-sidecar-append-n-token)
+    - [Proxy request through client sidecar (append role token)](#proxy-request-through-client-sidecar-append-role-token)
 - [Deployment Procedure](#deployment-procedure)
-- [License](#license)
-- [Contributor License Agreement](#contributor-license-agreement)
 - [About releases](#about-releases)
 - [Authors](#authors)
 
@@ -611,35 +609,11 @@ We only provided golang example, but user can implement a client using any other
    kubectl logs nginx-deployment-6cc8764f9c-5c6hm -c athenz-client-sidecar
    ```
 
-## License
-
-```markdown
-Copyright (C) 2018 Yahoo Japan Corporation Athenz team.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
-## Contributor License Agreement
-
-This project requires contributors to agree to a [Contributor License Agreement (CLA)](https://gist.github.com/ydnjp/3095832f100d5c3d2592).
-
-Note that only for contributions to the `athenz-client-sidecar` repository on the [GitHub](https://github.com/AthenZ/athenz-client-sidecar), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
-
 ## About releases
 
 - Releases
-    - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/AthenZ/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/AthenZ/athenz-client-sidecar/releases/latest)
-    - [![Docker Image Version (tag latest)](https://img.shields.io/docker/v/athenz/athenz-client-sidecar/latest?style=flat-square&label=Docker%20version)](https://hub.docker.com/r/athenz/athenz-client-sidecar/tags)
+  - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/AthenZ/athenz-client-sidecar?style=flat-square&label=Github%20version)](https://github.com/AthenZ/athenz-client-sidecar/releases/latest)
+  - [![Docker Image Version (tag latest)](https://img.shields.io/docker/v/athenz/athenz-client-sidecar/latest?style=flat-square&label=Docker%20version)](https://hub.docker.com/r/athenz/athenz-client-sidecar/tags)
 
 ## Authors
 
@@ -648,4 +622,3 @@ Note that only for contributions to the `athenz-client-sidecar` repository on th
 - [TakuyaMatsu](https://github.com/TakuyaMatsu)
 - [tatyano](https://github.com/tatyano)
 - [WindzCUHK](https://github.com/WindzCUHK)
-
