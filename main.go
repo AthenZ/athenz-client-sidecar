@@ -166,6 +166,15 @@ func main() {
 		return
 	}
 	glg.Info("Athenz client sidecar shutdown success")
+
+	/*
+		For some reason, if only Sidecar has terminated while the main application continues to run,
+		the exit status is set to 1 to prevent the main application from continuing to operate alone.
+		During the development of Sidecar, we found a pattern where even if some containers within a Pod in Kubernetes exit with status 0,
+		the Pod as a whole continues to operate.
+		By setting the exit status of Sidecar to 1,
+		it is expected that the entire Pod will be restarted from the Kubernetes side under any circumstances.
+	*/
 	os.Exit(1)
 }
 
