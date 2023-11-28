@@ -26,7 +26,8 @@ on:
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
   DOCKER_REGISTRY_OWNER: athenz
-  DOCKER_REGISTRY_USER: abvaidya
+  # DOCKER_REGISTRY_USER: values for docker login is stored in repository variables
+  # DOCKER_REGISTRY_TOKEN_NAME: values for docker login is stored in repository variables
 
 jobs:
   build:
@@ -62,9 +63,7 @@ jobs:
           [[ "${{ env.DOCKER_REGISTRY_URL}}" = "" ]] && echo "DOCKER_REGISTRY_URL=docker.io" >> $GITHUB_ENV
           [[ "${{ env.DOCKER_REGISTRY_OWNER }}" = "" ]] && echo "DOCKER_REGISTRY_OWNER=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
           [[ "${{ env.DOCKER_REGISTRY_IMAGE }}" = "" ]] && echo "DOCKER_REGISTRY_IMAGE=${{ env.CI_REPOSITORY_NAME }}" >> $GITHUB_ENV
-          [[ "${{ env.DOCKER_REGISTRY_TOKEN}}" = "" ]] && echo "DOCKER_REGISTRY_TOKEN=${{ secrets.DOCKER_REGISTRY_TOKEN }}" >> $GITHUB_ENV
-          [[ "${{ env.DELETE_UNTAGGED_IMAGES_TOKEN }}" = "" ]] && echo "DELETE_UNTAGGED_IMAGES_TOKEN=${{ env.DOCKER_REGISTRY_TOKEN }}" >> $GITHUB_ENV
-          [[ "${{ env.DELETE_UNTAGGED_IMAGES_PER_PAGE }}" = "" ]] && echo "DELETE_UNTAGGED_IMAGES_PER_PAGE=100" >> $GITHUB_ENV
+          [[ "${{ env.DOCKER_REGISTRY_TOKEN_NAME}}" = "" ]] && echo "DOCKER_REGISTRY_TOKEN_NAME=GITHUB_TOKEN" >> $GITHUB_ENV
 
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.
       # https://github.com/actions/checkout
@@ -180,7 +179,7 @@ jobs:
           # Username used to log against the Docker registry
           username: ${{ env.DOCKER_REGISTRY_USER }} # optional
           # Password or personal access token used to log against the Docker registry
-          password: ${{ env.DOCKER_REGISTRY_TOKEN }} # optional
+          password: ${{ secrets[env.DOCKER_REGISTRY_TOKEN_NAME] }} # optional
           # Log out from the Docker registry at the end of a job
           logout: true # optional, default is true
 
