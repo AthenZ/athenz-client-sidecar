@@ -25,7 +25,7 @@ on:
 
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
-  DOCKER_REGISTRY_OWNER: athenz
+  DOCKER_REGISTRY_ORG: athenz
   # DOCKER_REGISTRY_USER: values for docker login is stored in repository variables
   # DOCKER_REGISTRY_TOKEN_NAME: values for docker login is stored in repository variables
 
@@ -61,7 +61,7 @@ jobs:
         run: |
           # Use docker.io for Docker Hub if empty
           [[ "${{ env.DOCKER_REGISTRY_URL}}" = "" ]] && echo "DOCKER_REGISTRY_URL=docker.io" >> $GITHUB_ENV
-          [[ "${{ env.DOCKER_REGISTRY_OWNER }}" = "" ]] && echo "DOCKER_REGISTRY_OWNER=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
+          [[ "${{ env.DOCKER_REGISTRY_ORG }}" = "" ]] && echo "DOCKER_REGISTRY_ORG=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
           [[ "${{ env.DOCKER_REGISTRY_IMAGE }}" = "" ]] && echo "DOCKER_REGISTRY_IMAGE=${{ env.CI_REPOSITORY_NAME }}" >> $GITHUB_ENV
 
           # debug messages
@@ -152,7 +152,7 @@ jobs:
         # uses: https://github.com/docker/metadata-action/tags
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}
+          images: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}
           # for latest tag
           # latest=auto for tagging latest only for "master" branch
           flavor: |
@@ -220,7 +220,7 @@ jobs:
           # tags: ${{ steps.meta.outputs.tags }}
           push: true
           load: false
-          tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
+          tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
           build-args: |
