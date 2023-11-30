@@ -64,11 +64,6 @@ jobs:
           [[ "${{ env.DOCKER_REGISTRY_ORG }}" = "" ]] && echo "DOCKER_REGISTRY_ORG=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
           [[ "${{ env.DOCKER_REGISTRY_IMAGE }}" = "" ]] && echo "DOCKER_REGISTRY_IMAGE=${{ env.CI_REPOSITORY_NAME }}" >> $GITHUB_ENV
 
-          # debug messages
-          echo "docker login username: ${{ vars.DOCKER_REGISTRY_USER }}"
-          echo "docker login secret name: ${{ vars.DOCKER_REGISTRY_TOKEN_NAME }}"
-          echo "${{ secrets[vars.DOCKER_REGISTRY_TOKEN_NAME] }}" | wc -c
-
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.
       # https://github.com/actions/checkout
       -
@@ -215,12 +210,12 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          # push: ${{ github.event_name != 'pull_request' }}
-          # load: ${{ github.event_name == 'pull_request' }}
-          # tags: ${{ steps.meta.outputs.tags }}
-          push: true
-          load: false
-          tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # push: true
+          # load: false
+          # tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
           build-args: |
