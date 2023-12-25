@@ -837,6 +837,12 @@ func Test_accessService_GetAccessProvider(t *testing.T) {
 	}
 }
 
+func Test_accessService_TokenCacheLen(t *testing.T) {
+}
+
+func Test_accessService_TokenCacheSize(t *testing.T) {
+}
+
 func Test_accessService_getAccessToken(t *testing.T) {
 	type fields struct {
 		cfg                   config.AccessToken

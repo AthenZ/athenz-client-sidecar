@@ -797,6 +797,12 @@ func Test_roleService_GetRoleProvider(t *testing.T) {
 	}
 }
 
+func Test_roleService_TokenCacheLen(t *testing.T) {
+}
+
+func Test_roleService_TokenCacheSize(t *testing.T) {
+}
+
 func Test_roleService_getRoleToken(t *testing.T) {
 	type fields struct {
 		cfg                   config.RoleToken

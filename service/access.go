@@ -55,7 +55,7 @@ type accessService struct {
 	athenzURL             string
 	athenzPrincipleHeader string
 	tokenCache            gache.Gache
-	memoryUsage           int64 // TODO:
+	memoryUsage           int64
 	group                 singleflight.Group
 	expiry                time.Duration
 	httpClient            atomic.Value
@@ -239,7 +239,6 @@ func (a *accessService) StartAccessUpdater(ctx context.Context) <-chan error {
 	a.tokenCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
 		glg.Warnf("the following cache is expired, key: %v", k)
 
-		// TODO:
 		if val, ok := a.tokenCache.Get(k); ok {
 			if data, ok := val.(*accessCacheData); ok {
 				size := accessCacheMemoryUsage(data)
@@ -296,12 +295,10 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 	return echan
 }
 
-// TODO:
 func (a *accessService) TokenCacheLen() int {
 	return a.tokenCache.Len()
 }
 
-// TODO:
 func (a *accessService) TokenCacheSize() int64 {
 	return a.memoryUsage
 }
@@ -361,8 +358,8 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 		}
 		a.tokenCache.SetWithExpire(key, acd, expTime.Sub(expTimeDelta))
 
-		// TODO:
 		a.memoryUsage += accessCacheMemoryUsage(acd)
+		a.memoryUsage += int64(len(key))
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, expTime.Unix())
 		return at, nil
@@ -374,16 +371,14 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 	return at.(*AccessTokenResponse), err
 }
 
-// TODO:
-func accessCacheMemoryUsage(data *accessCacheData) int64 {
-	tokenSize := int64(unsafe.Sizeof(data.token)) + int64(len(data.token))
-	domainSize := int64(unsafe.Sizeof(data.domain)) + int64(len(data.domain))
-	roleSize := int64(unsafe.Sizeof(data.role)) + int64(len(data.role))
-	proxySize := int64(unsafe.Sizeof(data.proxyForPrincipal)) + int64(len(data.proxyForPrincipal))
-	expiresInSize := int64(unsafe.Sizeof(data.expiresIn))
-	expirySize := int64(unsafe.Sizeof(data.expiry))
-	scopeSize := int64(unsafe.Sizeof(data.scope)) + int64(len(data.scope))
-	//これだと足りない
+func accessCacheMemoryUsage(acd *accessCacheData) int64 {
+	tokenSize := int64(unsafe.Sizeof(acd.token)) + int64(len(acd.token))
+	domainSize := int64(unsafe.Sizeof(acd.domain)) + int64(len(acd.domain))
+	roleSize := int64(unsafe.Sizeof(acd.role)) + int64(len(acd.role))
+	proxySize := int64(unsafe.Sizeof(acd.proxyForPrincipal)) + int64(len(acd.proxyForPrincipal))
+	expiresInSize := int64(unsafe.Sizeof(acd.expiresIn))
+	expirySize := int64(unsafe.Sizeof(acd.expiry))
+	scopeSize := int64(unsafe.Sizeof(acd.scope)) + int64(len(acd.scope))
 
 	return tokenSize + domainSize + roleSize + proxySize + expiresInSize + expirySize + scopeSize
 }
