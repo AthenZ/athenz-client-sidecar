@@ -27,6 +27,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -43,6 +44,8 @@ type AccessService interface {
 	StartAccessUpdater(context.Context) <-chan error
 	RefreshAccessTokenCache(ctx context.Context) <-chan error
 	GetAccessProvider() AccessProvider
+	TokenCacheLen() int
+	TokenCacheSize() int64
 }
 
 // accessService represents the implementation of Athenz AccessService
@@ -52,6 +55,7 @@ type accessService struct {
 	athenzURL             string
 	athenzPrincipleHeader string
 	tokenCache            gache.Gache
+	memoryUsage           int64 // TODO:
 	group                 singleflight.Group
 	expiry                time.Duration
 	httpClient            atomic.Value
@@ -194,6 +198,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
 		tokenCache:            gache.New(),
+		memoryUsage:           0,
 		expiry:                exp,
 		httpClient:            httpClient,
 		rootCAs:               cp,
@@ -233,6 +238,14 @@ func (a *accessService) StartAccessUpdater(ctx context.Context) <-chan error {
 	a.tokenCache.StartExpired(ctx, cachePurgePeriod)
 	a.tokenCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
 		glg.Warnf("the following cache is expired, key: %v", k)
+
+		// TODO:
+		if val, ok := a.tokenCache.Get(k); ok {
+			if data, ok := val.(*accessCacheData); ok {
+				size := accessCacheMemoryUsage(data)
+				a.memoryUsage -= size
+			}
+		}
 	})
 	return ech
 }
@@ -283,6 +296,16 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 	return echan
 }
 
+// TODO:
+func (a *accessService) TokenCacheLen() int {
+	return a.tokenCache.Len()
+}
+
+// TODO:
+func (a *accessService) TokenCacheSize() int64 {
+	return a.memoryUsage
+}
+
 // updateAccessTokenWithRetry wraps updateAccessToken with retry logic.
 func (a *accessService) updateAccessTokenWithRetry(ctx context.Context, domain, role, proxyForPrincipal string, expiresIn int64) <-chan error {
 	glg.Debugf("updateAccessTokenWithRetry started, domain: %s, role: %s, proxyForPrincipal: %s, expiresIn: %d", domain, role, proxyForPrincipal, expiresIn)
@@ -327,7 +350,7 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			return nil, fmt.Errorf("jwt.GetExpirationTime() err: %v", err)
 		}
 
-		a.tokenCache.SetWithExpire(key, &accessCacheData{
+		acd := &accessCacheData{
 			token:             at.AccessToken,
 			domain:            domain,
 			role:              role,
@@ -335,7 +358,11 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			expiresIn:         expiresIn,
 			expiry:            expTime.Unix(),
 			scope:             at.Scope,
-		}, expTime.Sub(expTimeDelta))
+		}
+		a.tokenCache.SetWithExpire(key, acd, expTime.Sub(expTimeDelta))
+
+		// TODO:
+		a.memoryUsage += accessCacheMemoryUsage(acd)
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, expTime.Unix())
 		return at, nil
@@ -345,6 +372,20 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 	}
 
 	return at.(*AccessTokenResponse), err
+}
+
+// TODO:
+func accessCacheMemoryUsage(data *accessCacheData) int64 {
+	tokenSize := int64(unsafe.Sizeof(data.token)) + int64(len(data.token))
+	domainSize := int64(unsafe.Sizeof(data.domain)) + int64(len(data.domain))
+	roleSize := int64(unsafe.Sizeof(data.role)) + int64(len(data.role))
+	proxySize := int64(unsafe.Sizeof(data.proxyForPrincipal)) + int64(len(data.proxyForPrincipal))
+	expiresInSize := int64(unsafe.Sizeof(data.expiresIn))
+	expirySize := int64(unsafe.Sizeof(data.expiry))
+	scopeSize := int64(unsafe.Sizeof(data.scope)) + int64(len(data.scope))
+	//これだと足りない
+
+	return tokenSize + domainSize + roleSize + proxySize + expiresInSize + expirySize + scopeSize
 }
 
 // fetchAccessToken fetches the access token from Athenz server, and returns the AccessTokenResponse or any error occurred.

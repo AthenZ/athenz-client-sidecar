@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/fastime"
@@ -44,6 +45,8 @@ type RoleService interface {
 	StartRoleUpdater(context.Context) <-chan error
 	RefreshRoleTokenCache(ctx context.Context) <-chan error
 	GetRoleProvider() RoleProvider
+	TokenCacheLen() int
+	TokenCacheSize() int64
 }
 
 // roleService represents the implementation of Athenz RoleService
@@ -53,6 +56,7 @@ type roleService struct {
 	athenzURL             string
 	athenzPrincipleHeader string
 	domainRoleCache       gache.Gache
+	memoryUsage           int64
 	group                 singleflight.Group
 	expiry                time.Duration
 	httpClient            atomic.Value
@@ -206,6 +210,7 @@ func NewRoleService(cfg config.RoleToken, token ntokend.TokenProvider) (RoleServ
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
 		domainRoleCache:       gache.New(),
+		memoryUsage:           0,
 		expiry:                exp,
 		httpClient:            httpClient,
 		rootCAs:               cp,
@@ -245,6 +250,14 @@ func (r *roleService) StartRoleUpdater(ctx context.Context) <-chan error {
 	r.domainRoleCache.StartExpired(ctx, cachePurgePeriod)
 	r.domainRoleCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
 		glg.Warnf("the following cache is expired, key: %v", k)
+
+		// TODO:
+		if val, ok := r.domainRoleCache.Get(k); ok {
+			if data, ok := val.(*cacheData); ok {
+				size := roleCacheMemoryUsage(data)
+				r.memoryUsage -= size
+			}
+		}
 	})
 	return ech
 }
@@ -286,6 +299,16 @@ func (r *roleService) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 	return echan
 }
 
+// TODO:
+func (a *roleService) TokenCacheLen() int {
+	return a.domainRoleCache.Len()
+}
+
+// TODO:
+func (a *roleService) TokenCacheSize() int64 {
+	return a.memoryUsage
+}
+
 // updateRoleTokenWithRetry wraps updateRoleToken with retry logic.
 func (r *roleService) updateRoleTokenWithRetry(ctx context.Context, domain, role, proxyForPrincipal string, minExpiry, maxExpiry int64) <-chan error {
 	glg.Debugf("updateRoleTokenWithRetry started, domain: %s, role: %s, proxyForPrincipal: %s, minExpiry: %d, maxExpiry: %d", domain, role, proxyForPrincipal, minExpiry, maxExpiry)
@@ -320,14 +343,18 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 			return nil, e
 		}
 
-		r.domainRoleCache.SetWithExpire(key, &cacheData{
+		cd := &cacheData{
 			token:             rt,
 			domain:            domain,
 			role:              role,
 			proxyForPrincipal: proxyForPrincipal,
 			minExpiry:         minExpiry,
 			maxExpiry:         maxExpiry,
-		}, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
+		}
+		r.domainRoleCache.SetWithExpire(key, cd, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
+
+		// TODO:
+		r.memoryUsage += roleCacheMemoryUsage(cd)
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, rt.ExpiryTime)
 		return rt, nil
@@ -337,6 +364,19 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 	}
 
 	return rt.(*RoleToken), err
+}
+
+// TODO:
+func roleCacheMemoryUsage(data *cacheData) int64 {
+	tokenSize := int64(unsafe.Sizeof(data.token)) + int64(len(data.token.Token))
+	expiryTimeSize := int64(unsafe.Sizeof(data.token.ExpiryTime)) + int64(len(strconv.FormatInt(data.token.ExpiryTime, 10)))
+	domainSize := int64(unsafe.Sizeof(data.domain)) + int64(len(data.domain))
+	roleSize := int64(unsafe.Sizeof(data.role)) + int64(len(data.role))
+	proxyForPrincipalSize := int64(unsafe.Sizeof(data.proxyForPrincipal)) + int64(len(data.proxyForPrincipal))
+	minExpirySize := int64(unsafe.Sizeof(data.minExpiry))
+	maxExpirySize := int64(unsafe.Sizeof(data.maxExpiry))
+
+	return tokenSize + expiryTimeSize + domainSize + roleSize + proxyForPrincipalSize + minExpirySize + maxExpirySize
 }
 
 // fetchRoleToken fetch the role token from Athenz server, and return the decoded role token and any error if occurred.

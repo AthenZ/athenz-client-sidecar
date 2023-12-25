@@ -21,6 +21,8 @@ type AccessServiceMock struct {
 	StartAccessUpdaterFunc      func(context.Context) <-chan error
 	RefreshAccessTokenCacheFunc func(ctx context.Context) <-chan error
 	GetAccessProviderFunc       func() AccessProvider
+	TokenCacheLenFunc           func() int
+	TokenCacheSizeFunc          func() int64
 }
 
 // StartAccessUpdater is a mock implementation of AccessService.StartAccessUpdater
@@ -36,4 +38,12 @@ func (asm *AccessServiceMock) RefreshAccessTokenCache(ctx context.Context) <-cha
 // GetAccessProvider is a mock implementation of AccessService.GetAccessProvider
 func (asm *AccessServiceMock) GetAccessProvider() AccessProvider {
 	return asm.GetAccessProviderFunc()
+}
+
+func (asm *AccessServiceMock) TokenCacheLen() int {
+	return asm.TokenCacheLenFunc()
+}
+
+func (asm *AccessServiceMock) TokenCacheSize() int64 {
+	return asm.TokenCacheSizeFunc()
 }
