@@ -372,15 +372,10 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 func accessCacheMemoryUsage(acd *accessCacheData) int64 {
-	tokenSize := int64(unsafe.Sizeof(acd.token)) + int64(len(acd.token))
-	domainSize := int64(unsafe.Sizeof(acd.domain)) + int64(len(acd.domain))
-	roleSize := int64(unsafe.Sizeof(acd.role)) + int64(len(acd.role))
-	proxySize := int64(unsafe.Sizeof(acd.proxyForPrincipal)) + int64(len(acd.proxyForPrincipal))
-	expiresInSize := int64(unsafe.Sizeof(acd.expiresIn))
-	expirySize := int64(unsafe.Sizeof(acd.expiry))
-	scopeSize := int64(unsafe.Sizeof(acd.scope)) + int64(len(acd.scope))
+	structSize := int64(unsafe.Sizeof(acd.token) + unsafe.Sizeof(acd.domain) + unsafe.Sizeof(acd.role) + unsafe.Sizeof(acd.proxyForPrincipal) + unsafe.Sizeof(acd.expiresIn) + unsafe.Sizeof(acd.expiry) + unsafe.Sizeof(acd.scope))
+	stringSize := int64(len(acd.token) + len(acd.domain) + len(acd.role) + len(acd.proxyForPrincipal) + len(acd.scope))
 
-	return tokenSize + domainSize + roleSize + proxySize + expiresInSize + expirySize + scopeSize
+	return structSize + stringSize
 }
 
 // fetchAccessToken fetches the access token from Athenz server, and returns the AccessTokenResponse or any error occurred.

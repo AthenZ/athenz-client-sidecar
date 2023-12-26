@@ -364,15 +364,12 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 }
 
 func roleCacheMemoryUsage(data *cacheData) int64 {
-	tokenSize := int64(unsafe.Sizeof(data.token)) + int64(len(data.token.Token))
-	expiryTimeSize := int64(unsafe.Sizeof(data.token.ExpiryTime)) + int64(len(strconv.FormatInt(data.token.ExpiryTime, 10)))
-	domainSize := int64(unsafe.Sizeof(data.domain)) + int64(len(data.domain))
-	roleSize := int64(unsafe.Sizeof(data.role)) + int64(len(data.role))
-	proxyForPrincipalSize := int64(unsafe.Sizeof(data.proxyForPrincipal)) + int64(len(data.proxyForPrincipal))
-	minExpirySize := int64(unsafe.Sizeof(data.minExpiry))
-	maxExpirySize := int64(unsafe.Sizeof(data.maxExpiry))
+	structSize := int64(unsafe.Sizeof(data.token) + unsafe.Sizeof(data.domain) + unsafe.Sizeof(data.role) + unsafe.Sizeof(data.proxyForPrincipal) + unsafe.Sizeof(data.minExpiry) + unsafe.Sizeof(data.maxExpiry))
+	stringSize := int64(len(data.domain) + len(data.role) + len(data.proxyForPrincipal))
+	rtStructSize := int64(unsafe.Sizeof(data.token.Token) + unsafe.Sizeof(data.token.ExpiryTime))
+	rtStringSize := int64(len(data.token.Token) + len(strconv.FormatInt(data.token.ExpiryTime, 10)))
 
-	return tokenSize + expiryTimeSize + domainSize + roleSize + proxyForPrincipalSize + minExpirySize + maxExpirySize
+	return structSize + stringSize + rtStructSize + rtStringSize
 }
 
 // fetchRoleToken fetch the role token from Athenz server, and return the decoded role token and any error if occurred.
