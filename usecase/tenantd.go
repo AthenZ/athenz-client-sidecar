@@ -213,11 +213,11 @@ func report(t *clientd) {
 		atcLen, rtcLen   int
 	)
 	if t.access != nil {
-		atcSize = t.access.TokenCacheSize()
+		atcSize = int64(float64(t.access.TokenCacheSize()) * 1.125)
 		atcLen = t.access.TokenCacheLen()
 	}
 	if t.role != nil {
-		rtcSize = t.role.TokenCacheSize()
+		rtcSize = int64(float64(t.role.TokenCacheSize()) * 1.125)
 		rtcLen = t.role.TokenCacheLen()
 	}
 	totalSize := atcSize + rtcSize

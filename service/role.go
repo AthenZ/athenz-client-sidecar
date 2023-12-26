@@ -250,13 +250,7 @@ func (r *roleService) StartRoleUpdater(ctx context.Context) <-chan error {
 	r.domainRoleCache.StartExpired(ctx, cachePurgePeriod)
 	r.domainRoleCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
 		glg.Warnf("the following cache is expired, key: %v", k)
-
-		if val, ok := r.domainRoleCache.Get(k); ok {
-			if data, ok := val.(*cacheData); ok {
-				size := roleCacheMemoryUsage(data)
-				r.memoryUsage -= size
-			}
-		}
+		glg.Warnf("Expired caches are included in the estimated memory usage being logged as INFO.")
 	})
 	return ech
 }
@@ -348,18 +342,8 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 			minExpiry:         minExpiry,
 			maxExpiry:         maxExpiry,
 		}
-		oldTokenCacheData, _ := r.domainRoleCache.Get(key)
-		r.domainRoleCache.SetWithExpire(key, cd, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
-		if oldTokenCacheData != nil {
-			if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok {
-				oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
-				r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
-			}
-		} else {
-			r.memoryUsage += roleCacheMemoryUsage(cd)
-			r.memoryUsage += int64(len(key))
-		}
 
+		r.storeTokenCache(key, cd, expTimeDelta, rt.ExpiryTime)
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, rt.ExpiryTime)
 		return rt, nil
 	})
@@ -368,6 +352,20 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 	}
 
 	return rt.(*RoleToken), err
+}
+
+func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta time.Time, expTime int64) {
+	oldTokenCacheData, _ := r.domainRoleCache.Get(key)
+	r.domainRoleCache.SetWithExpire(key, cd, time.Unix(expTime, 0).Sub(expTimeDelta))
+	if oldTokenCacheData != nil {
+		if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok {
+			oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
+			r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
+		}
+	} else {
+		r.memoryUsage += roleCacheMemoryUsage(cd)
+		r.memoryUsage += int64(len(key))
+	}
 }
 
 func roleCacheMemoryUsage(cd *cacheData) int64 {
