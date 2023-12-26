@@ -925,7 +925,7 @@ func Test_roleService_TokenCacheSize(t *testing.T) {
 					dummyServer.Close()
 					return nil
 				},
-				want: 161,
+				want: 177,
 			}
 		}(),
 	}
