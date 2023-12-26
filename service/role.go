@@ -348,10 +348,17 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 			minExpiry:         minExpiry,
 			maxExpiry:         maxExpiry,
 		}
+		oldTokenCacheData, _ := r.domainRoleCache.Get(key)
 		r.domainRoleCache.SetWithExpire(key, cd, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
-
-		r.memoryUsage += roleCacheMemoryUsage(cd)
-		r.memoryUsage += int64(len(key))
+		if oldTokenCacheData != nil {
+			if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok && oldTokenCache.token != nil {
+				oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
+				r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
+			}
+		} else {
+			r.memoryUsage += roleCacheMemoryUsage(cd)
+			r.memoryUsage += int64(len(key))
+		}
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, rt.ExpiryTime)
 		return rt, nil

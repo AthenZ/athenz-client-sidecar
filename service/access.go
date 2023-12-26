@@ -356,10 +356,17 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 			expiry:            expTime.Unix(),
 			scope:             at.Scope,
 		}
+		oldTokenCacheData, _ := a.tokenCache.Get(key)
 		a.tokenCache.SetWithExpire(key, acd, expTime.Sub(expTimeDelta))
-
-		a.memoryUsage += accessCacheMemoryUsage(acd)
-		a.memoryUsage += int64(len(key))
+		if oldTokenCacheData != nil {
+			if oldTokenCache, ok := oldTokenCacheData.(*accessCacheData); ok {
+				oldTokenCacheSize := accessCacheMemoryUsage(oldTokenCache)
+				a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
+			}
+		} else {
+			a.memoryUsage += accessCacheMemoryUsage(acd)
+			a.memoryUsage += int64(len(key))
+		}
 
 		glg.Debugf("token is cached, domain: %s, role: %s, proxyForPrincipal: %s, expiry time: %v", domain, role, proxyForPrincipal, expTime.Unix())
 		return at, nil
