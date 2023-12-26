@@ -350,7 +350,6 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 		}
 		r.domainRoleCache.SetWithExpire(key, cd, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
 
-		// TODO:
 		r.memoryUsage += roleCacheMemoryUsage(cd)
 		r.memoryUsage += int64(len(key))
 
@@ -364,7 +363,6 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 	return rt.(*RoleToken), err
 }
 
-// TODO:
 func roleCacheMemoryUsage(data *cacheData) int64 {
 	tokenSize := int64(unsafe.Sizeof(data.token)) + int64(len(data.token.Token))
 	expiryTimeSize := int64(unsafe.Sizeof(data.token.ExpiryTime)) + int64(len(strconv.FormatInt(data.token.ExpiryTime, 10)))

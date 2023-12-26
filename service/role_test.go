@@ -798,9 +798,170 @@ func Test_roleService_GetRoleProvider(t *testing.T) {
 }
 
 func Test_roleService_TokenCacheLen(t *testing.T) {
+	type fields struct {
+		token           ntokend.TokenProvider
+		domainRoleCache gache.Gache
+		expiry          time.Duration
+	}
+	type test struct {
+		name   string
+		fields fields
+		want   int
+	}
+	tests := []test{
+		func() test {
+			dummyTok := "dummyToken"
+			dummyExpTime := int64(1)
+			dummyToken := fmt.Sprintf(`{"token":"%v", "expiryTime": %v}`, dummyTok, dummyExpTime)
+			dummyRoleToken := &RoleToken{
+				Token:      dummyToken,
+				ExpiryTime: dummyExpTime,
+			}
+
+			domainRoleCache := gache.New()
+			domainRoleCache.SetWithExpire("dummyDomain;dummyRole", &cacheData{
+				token: dummyRoleToken,
+			}, time.Minute)
+			return test{
+				name: "TokenCacheLen() is output when the cache exist",
+				fields: fields{
+					domainRoleCache: domainRoleCache,
+					expiry:          time.Second,
+					token: func() (string, error) {
+						return "dummy N-token", nil
+					},
+				},
+				want: 1,
+			}
+		}(),
+		func() test {
+			domainRoleCache := gache.New()
+			return test{
+				name: "TokenCacheLen() is 0 when the cache does not exist",
+				fields: fields{
+					domainRoleCache: domainRoleCache,
+					expiry:          0,
+					token: func() (string, error) {
+						return "", nil
+					},
+				},
+				want: 0,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &roleService{
+				token:           tt.fields.token,
+				domainRoleCache: tt.fields.domainRoleCache,
+				expiry:          tt.fields.expiry,
+			}
+			got := r.TokenCacheLen()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("roleService.TokenCacheSize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func Test_roleService_TokenCacheSize(t *testing.T) {
+	type fields struct {
+		cfg                   config.RoleToken
+		token                 ntokend.TokenProvider
+		athenzURL             string
+		athenzPrincipleHeader string
+		domainRoleCache       gache.Gache
+		expiry                time.Duration
+		httpClient            atomic.Value
+	}
+	type args struct {
+		ctx               context.Context
+		domain            string
+		role              string
+		proxyForPrincipal string
+		minExpiry         int64
+		maxExpiry         int64
+	}
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		afterFunc func() error
+		want      int64
+	}
+	tests := []test{
+		func() test {
+			dummyTok := "dummyToken"
+			dummyExpTime := int64(999999999)
+			dummyToken := fmt.Sprintf(`{"token":"%v", "expiryTime": %v}`, dummyTok, dummyExpTime)
+
+			var sampleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, dummyToken)
+			})
+			dummyServer := httptest.NewTLSServer(sampleHandler)
+
+			var httpClient atomic.Value
+			httpClient.Store(dummyServer.Client())
+			return test{
+				name: "Check correct size is output when cache exists",
+				fields: fields{
+					httpClient:      httpClient,
+					domainRoleCache: gache.New(),
+					token: func() (string, error) {
+						return dummyToken, nil
+					},
+					athenzURL:             dummyServer.URL,
+					athenzPrincipleHeader: "Athenz-Principal",
+				},
+				args: args{
+					ctx:               context.Background(),
+					domain:            "dummyDomain",
+					role:              "dummyRole",
+					proxyForPrincipal: "dummyProxy",
+					minExpiry:         1,
+					maxExpiry:         1,
+				},
+				afterFunc: func() error {
+					dummyServer.Close()
+					return nil
+				},
+				want: 161,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		if tt.afterFunc != nil {
+			defer func() {
+				err := tt.afterFunc()
+				if err != nil {
+					t.Errorf("roleService.TokenCacheSize() afterFunc error: %v", err)
+				}
+			}()
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			r := &roleService{
+				cfg:                   tt.fields.cfg,
+				token:                 tt.fields.token,
+				athenzURL:             tt.fields.athenzURL,
+				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
+				domainRoleCache:       tt.fields.domainRoleCache,
+				expiry:                tt.fields.expiry,
+				httpClient:            tt.fields.httpClient,
+			}
+
+			_, err := r.updateRoleToken(tt.args.ctx, tt.args.domain, tt.args.role, tt.args.proxyForPrincipal, tt.args.minExpiry, tt.args.maxExpiry)
+			got := r.TokenCacheSize()
+			if err != nil {
+				t.Errorf("failed to updateRoleToken, err: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("roleService.TokenCacheSize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func Test_roleService_getRoleToken(t *testing.T) {
