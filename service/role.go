@@ -351,7 +351,7 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 		oldTokenCacheData, _ := r.domainRoleCache.Get(key)
 		r.domainRoleCache.SetWithExpire(key, cd, time.Unix(rt.ExpiryTime, 0).Sub(expTimeDelta))
 		if oldTokenCacheData != nil {
-			if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok && oldTokenCache.token != nil {
+			if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok {
 				oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
 				r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
 			}
@@ -370,12 +370,14 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 	return rt.(*RoleToken), err
 }
 
-func roleCacheMemoryUsage(data *cacheData) int64 {
-	structSize := int64(unsafe.Sizeof(data.token) + unsafe.Sizeof(data.domain) + unsafe.Sizeof(data.role) + unsafe.Sizeof(data.proxyForPrincipal) + unsafe.Sizeof(data.minExpiry) + unsafe.Sizeof(data.maxExpiry))
-	stringSize := int64(len(data.domain) + len(data.role) + len(data.proxyForPrincipal))
-	rtStructSize := int64(unsafe.Sizeof(data.token.Token) + unsafe.Sizeof(data.token.ExpiryTime))
-	rtStringSize := int64(len(data.token.Token) + len(strconv.FormatInt(data.token.ExpiryTime, 10)))
-
+func roleCacheMemoryUsage(cd *cacheData) int64 {
+	structSize := int64(unsafe.Sizeof(*cd))
+	stringSize := int64(len(cd.domain) + len(cd.role) + len(cd.proxyForPrincipal))
+	if cd.token == nil {
+		return structSize + stringSize
+	}
+	rtStructSize := int64(unsafe.Sizeof(*(cd.token)))
+	rtStringSize := int64(len(cd.token.Token))
 	return structSize + stringSize + rtStructSize + rtStringSize
 }
 

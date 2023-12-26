@@ -379,7 +379,7 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 func accessCacheMemoryUsage(acd *accessCacheData) int64 {
-	structSize := int64(unsafe.Sizeof(acd.token) + unsafe.Sizeof(acd.domain) + unsafe.Sizeof(acd.role) + unsafe.Sizeof(acd.proxyForPrincipal) + unsafe.Sizeof(acd.expiresIn) + unsafe.Sizeof(acd.expiry) + unsafe.Sizeof(acd.scope))
+	structSize := int64(unsafe.Sizeof(*acd))
 	stringSize := int64(len(acd.token) + len(acd.domain) + len(acd.role) + len(acd.proxyForPrincipal) + len(acd.scope))
 
 	return structSize + stringSize
