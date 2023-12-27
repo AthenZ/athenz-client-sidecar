@@ -237,8 +237,8 @@ func (a *accessService) StartAccessUpdater(ctx context.Context) <-chan error {
 
 	a.tokenCache.StartExpired(ctx, cachePurgePeriod)
 	a.tokenCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
-		glg.Warnf("the following cache is expired, key: %v", k)
-		glg.Warnf("Expired caches are included in the estimated memory usage being logged as INFO.")
+		glg.Warnf("unexpected cache expiry, please review your refreshPeriod and expiry configuration, and related token expiry in the request body, key: %v", k)
+		glg.Warnf("the expired token data is still counted in the cache memory usage estimation even the allocated memory is freed, which causes over-estimation in the cache memory usage log message")
 	})
 	return ech
 }
@@ -294,7 +294,9 @@ func (a *accessService) TokenCacheLen() int {
 }
 
 func (a *accessService) TokenCacheSize() int64 {
-	return a.memoryUsage
+	// To estimate the memory usage of the cache,
+	// we multiply memoryUsage by 1.125　to account for overhead of map structure
+	return int64(float64(a.memoryUsage) * 1.125)
 }
 
 // updateAccessTokenWithRetry wraps updateAccessToken with retry logic.
@@ -369,11 +371,14 @@ func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTim
 		if oldTokenCache, ok := oldTokenCacheData.(*accessCacheData); ok {
 			oldTokenCacheSize := accessCacheMemoryUsage(oldTokenCache)
 			a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
+			return
 		}
-	} else {
 		a.memoryUsage += accessCacheMemoryUsage(acd)
 		a.memoryUsage += int64(len(key))
+		return
 	}
+	a.memoryUsage += accessCacheMemoryUsage(acd) + int64(len(key))
+	return
 }
 
 func accessCacheMemoryUsage(acd *accessCacheData) int64 {

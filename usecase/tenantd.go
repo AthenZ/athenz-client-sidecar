@@ -158,6 +158,7 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 		}()
 	}
 
+	// start token cache report daemon (no need for graceful shutdown)
 	reportTicker := time.NewTicker(time.Minute)
 	go func() {
 		defer reportTicker.Stop()
@@ -174,7 +175,6 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 	return t.server.ListenAndServe(ctx)
 }
 
-// start token cache report daemon (no need for graceful shutdown)
 func report(t *clientd) {
 	// gather golang metrics
 	const sysMemMetric = "/memory/classes/total:bytes"                  // go_memstats_sys_bytes
@@ -213,11 +213,11 @@ func report(t *clientd) {
 		atcLen, rtcLen   int
 	)
 	if t.access != nil {
-		atcSize = int64(float64(t.access.TokenCacheSize()) * 1.125)
+		atcSize = t.access.TokenCacheSize()
 		atcLen = t.access.TokenCacheLen()
 	}
 	if t.role != nil {
-		rtcSize = int64(float64(t.role.TokenCacheSize()) * 1.125)
+		rtcSize = t.role.TokenCacheSize()
 		rtcLen = t.role.TokenCacheLen()
 	}
 	totalSize := atcSize + rtcSize

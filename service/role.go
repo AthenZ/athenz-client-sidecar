@@ -249,8 +249,8 @@ func (r *roleService) StartRoleUpdater(ctx context.Context) <-chan error {
 
 	r.domainRoleCache.StartExpired(ctx, cachePurgePeriod)
 	r.domainRoleCache.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, k string) {
-		glg.Warnf("the following cache is expired, key: %v", k)
-		glg.Warnf("Expired caches are included in the estimated memory usage being logged as INFO.")
+		glg.Warnf("unexpected cache expiry, please review your refreshPeriod and expiry configuration, and related token expiry in the request body, key: %v", k)
+		glg.Warnf("the expired token data is still counted in the cache memory usage estimation even the allocated memory is freed, which causes over-estimation in the cache memory usage log message")
 	})
 	return ech
 }
@@ -292,12 +292,14 @@ func (r *roleService) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 	return echan
 }
 
-func (a *roleService) TokenCacheLen() int {
-	return a.domainRoleCache.Len()
+func (r *roleService) TokenCacheLen() int {
+	return r.domainRoleCache.Len()
 }
 
-func (a *roleService) TokenCacheSize() int64 {
-	return a.memoryUsage
+func (r *roleService) TokenCacheSize() int64 {
+	// To estimate the memory usage of the cache,
+	// we multiply memoryUsage by 1.125　to account for overhead of map structure
+	return int64(float64(r.memoryUsage) * 1.125)
 }
 
 // updateRoleTokenWithRetry wraps updateRoleToken with retry logic.
@@ -361,11 +363,14 @@ func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta ti
 		if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok {
 			oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
 			r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
+			return
 		}
 	} else {
 		r.memoryUsage += roleCacheMemoryUsage(cd)
 		r.memoryUsage += int64(len(key))
+		return
 	}
+	return
 }
 
 func roleCacheMemoryUsage(cd *cacheData) int64 {
