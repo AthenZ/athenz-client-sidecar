@@ -290,7 +290,12 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 }
 
 func (a *accessService) TokenCacheLen() int {
-	return a.tokenCache.Len()
+	cacheLen := 0
+	a.tokenCache.Foreach(context.Background(), func(key string, val interface{}, exp int64) bool {
+		cacheLen += 1
+		return true
+	})
+	return cacheLen
 }
 
 func (a *accessService) TokenCacheSize() int64 {

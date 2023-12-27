@@ -293,7 +293,12 @@ func (r *roleService) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 }
 
 func (r *roleService) TokenCacheLen() int {
-	return r.domainRoleCache.Len()
+	cacheLen := 0
+	r.domainRoleCache.Foreach(context.Background(), func(key string, val interface{}, exp int64) bool {
+		cacheLen += 1
+		return true
+	})
+	return cacheLen
 }
 
 func (r *roleService) TokenCacheSize() int64 {
