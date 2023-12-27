@@ -374,7 +374,6 @@ func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTim
 			return
 		}
 		a.memoryUsage += accessCacheMemoryUsage(acd)
-		a.memoryUsage += int64(len(key))
 		return
 	}
 	a.memoryUsage += accessCacheMemoryUsage(acd) + int64(len(key))
