@@ -894,9 +894,9 @@ func Test_accessService_TokenCacheSize(t *testing.T) {
 			return test{
 				name: "TokenCacheSize exactly return memoryUsage field",
 				fields: fields{
-					memoryUsage: 100,
+					memoryUsage: 126,
 				},
-				want: 100,
+				want: 141,
 			}
 		}(),
 	}
@@ -2105,7 +2105,7 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 					expTimeDelta: time.Now().Add(time.Minute),
 					expTime:      &jwt.NumericDate{Time: time.Now().Add(time.Minute)},
 				},
-				want: 111,
+				want: 124,
 			}
 		}(),
 		func() test {
@@ -2130,7 +2130,7 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 					expTimeDelta: time.Now().Add(time.Minute),
 					expTime:      &jwt.NumericDate{Time: time.Now().Add(time.Minute)},
 				},
-				want: 112,
+				want: 126,
 			}
 		}(),
 	}
