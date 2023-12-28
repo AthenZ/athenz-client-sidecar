@@ -32,7 +32,7 @@ import (
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/kpango/fastime"
-	"github.com/kpango/gache"
+	"github.com/kpango/gache/v2"
 	"github.com/kpango/glg"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ type accessService struct {
 	token                 ntokend.TokenProvider
 	athenzURL             string
 	athenzPrincipleHeader string
-	tokenCache            gache.Gache
+	tokenCache            gache.Gache[accessCacheData]
 	memoryUsage           int64
 	group                 singleflight.Group
 	expiry                time.Duration
@@ -197,7 +197,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 		token:                 token,
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
-		tokenCache:            gache.New(),
+		tokenCache:            gache.New[accessCacheData](),
 		memoryUsage:           0,
 		expiry:                exp,
 		httpClient:            httpClient,
@@ -275,11 +275,10 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 	go func() {
 		defer close(echan)
 
-		a.tokenCache.Foreach(ctx, func(key string, val interface{}, exp int64) bool {
+		a.tokenCache.Range(ctx, func(key string, acd accessCacheData, exp int64) bool {
 			domain, role, principal := decode(key)
-			cd := val.(*accessCacheData)
 
-			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, cd.expiresIn) {
+			for err := range a.updateAccessTokenWithRetry(ctx, domain, role, principal, acd.expiresIn) {
 				echan <- err
 			}
 			return true
@@ -290,12 +289,7 @@ func (a *accessService) RefreshAccessTokenCache(ctx context.Context) <-chan erro
 }
 
 func (a *accessService) TokenCacheLen() int {
-	cacheLen := 0
-	a.tokenCache.Foreach(context.Background(), func(key string, val interface{}, exp int64) bool {
-		cacheLen += 1
-		return true
-	})
-	return cacheLen
+	return a.tokenCache.Len()
 }
 
 func (a *accessService) TokenCacheSize() int64 {
@@ -371,14 +365,10 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 
 func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTimeDelta time.Time, expTime *jwt.NumericDate) {
 	oldTokenCacheData, _ := a.tokenCache.Get(key)
-	a.tokenCache.SetWithExpire(key, acd, expTime.Sub(expTimeDelta))
-	if oldTokenCacheData != nil {
-		if oldTokenCache, ok := oldTokenCacheData.(*accessCacheData); ok {
-			oldTokenCacheSize := accessCacheMemoryUsage(oldTokenCache)
-			a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
-			return
-		}
-		a.memoryUsage += accessCacheMemoryUsage(acd)
+	a.tokenCache.SetWithExpire(key, *acd, expTime.Sub(expTimeDelta))
+	if oldTokenCacheData != (accessCacheData{}) {
+		oldTokenCacheSize := accessCacheMemoryUsage(&oldTokenCacheData)
+		a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
 		return
 	}
 	a.memoryUsage += accessCacheMemoryUsage(acd) + int64(len(key))
@@ -476,7 +466,7 @@ func (a *accessService) getCache(domain, role, principal string) (*accessCacheDa
 	if !ok {
 		return nil, false
 	}
-	return val.(*accessCacheData), ok
+	return &val, ok
 }
 
 // createGetAccessTokenRequest creates Athenz's postAccessTokenRequest.

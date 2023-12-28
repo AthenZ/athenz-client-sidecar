@@ -33,7 +33,7 @@ import (
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/kpango/fastime"
-	"github.com/kpango/gache"
+	"github.com/kpango/gache/v2"
 	"github.com/kpango/glg"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
@@ -55,7 +55,7 @@ type roleService struct {
 	token                 ntokend.TokenProvider
 	athenzURL             string
 	athenzPrincipleHeader string
-	domainRoleCache       gache.Gache
+	domainRoleCache       gache.Gache[cacheData]
 	memoryUsage           int64
 	group                 singleflight.Group
 	expiry                time.Duration
@@ -209,7 +209,7 @@ func NewRoleService(cfg config.RoleToken, token ntokend.TokenProvider) (RoleServ
 		token:                 token,
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
-		domainRoleCache:       gache.New(),
+		domainRoleCache:       gache.New[cacheData](),
 		memoryUsage:           0,
 		expiry:                exp,
 		httpClient:            httpClient,
@@ -278,9 +278,8 @@ func (r *roleService) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 	go func() {
 		defer close(echan)
 
-		r.domainRoleCache.Foreach(ctx, func(key string, val interface{}, exp int64) bool {
+		r.domainRoleCache.Range(ctx, func(key string, cd cacheData, exp int64) bool {
 			domain, role, principal := decode(key)
-			cd := val.(*cacheData)
 
 			for err := range r.updateRoleTokenWithRetry(ctx, domain, role, principal, cd.minExpiry, cd.maxExpiry) {
 				echan <- err
@@ -293,12 +292,7 @@ func (r *roleService) RefreshRoleTokenCache(ctx context.Context) <-chan error {
 }
 
 func (r *roleService) TokenCacheLen() int {
-	cacheLen := 0
-	r.domainRoleCache.Foreach(context.Background(), func(key string, val interface{}, exp int64) bool {
-		cacheLen += 1
-		return true
-	})
-	return cacheLen
+	return r.domainRoleCache.Len()
 }
 
 func (r *roleService) TokenCacheSize() int64 {
@@ -363,17 +357,13 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 
 func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta time.Time, expTime int64) {
 	oldTokenCacheData, _ := r.domainRoleCache.Get(key)
-	r.domainRoleCache.SetWithExpire(key, cd, time.Unix(expTime, 0).Sub(expTimeDelta))
-	if oldTokenCacheData != nil {
-		if oldTokenCache, ok := oldTokenCacheData.(*cacheData); ok {
-			oldTokenCacheSize := roleCacheMemoryUsage(oldTokenCache)
-			r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
-			return
-		}
+	r.domainRoleCache.SetWithExpire(key, *cd, time.Unix(expTime, 0).Sub(expTimeDelta))
+	if oldTokenCacheData != (cacheData{}) {
+		oldTokenCacheSize := roleCacheMemoryUsage(&oldTokenCacheData)
+		r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
 	} else {
 		r.memoryUsage += roleCacheMemoryUsage(cd)
 		r.memoryUsage += int64(len(key))
-		return
 	}
 	return
 }
@@ -454,7 +444,7 @@ func (r *roleService) getCache(domain, role, principal string) (*RoleToken, bool
 	if !ok {
 		return nil, false
 	}
-	return val.(*cacheData).token, ok
+	return val.token, ok
 }
 
 func (r *roleService) createGetRoleTokenRequest(domain, role string, minExpiry, maxExpiry int64, proxyForPrincipal string) (*http.Request, error) {

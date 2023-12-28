@@ -8,7 +8,7 @@ require (
 	github.com/AthenZ/athenz v1.11.32
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/kpango/fastime v1.1.9
-	github.com/kpango/gache v1.2.8
+	github.com/kpango/gache/v2 v2.0.9
 	github.com/kpango/glg v1.6.15
 	github.com/kpango/ntokend v1.0.12
 	github.com/pkg/errors v0.9.1

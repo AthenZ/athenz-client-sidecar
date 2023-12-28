@@ -32,7 +32,7 @@ import (
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/kpango/fastime"
-	"github.com/kpango/gache"
+	"github.com/kpango/gache/v2"
 	"github.com/kpango/ntokend"
 	"github.com/pkg/errors"
 )
@@ -110,7 +110,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry: func() time.Duration {
 						dur, _ := time.ParseDuration(args.cfg.Expiry)
 						return dur
@@ -152,7 +152,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry:                0,
 					errRetryInterval:      defaultErrRetryInterval,
 					errRetryMaxCount:      defaultErrRetryMaxCount,
@@ -271,7 +271,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry:                0,
 					errRetryInterval:      defaultErrRetryInterval,
 					errRetryMaxCount:      cnt,
@@ -320,7 +320,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry:                0,
 					rootCAs:               cp,
 					errRetryInterval:      defaultErrRetryInterval,
@@ -368,7 +368,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry:                0,
 					certPath:              "../test/data/dummyClient.crt",
 					certKeyPath:           "../test/data/dummyClient.key",
@@ -423,7 +423,7 @@ func TestNewAccessService(t *testing.T) {
 					token:                 args.token,
 					athenzURL:             args.cfg.AthenzURL,
 					athenzPrincipleHeader: args.cfg.PrincipalAuthHeader,
-					tokenCache:            gache.New(),
+					tokenCache:            gache.New[accessCacheData](),
 					expiry:                0,
 					certPath:              "",
 					certKeyPath:           "",
@@ -524,7 +524,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 		refreshPeriod         time.Duration
@@ -548,8 +548,8 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 			if err != nil {
 				fmt.Errorf("Failed to make access token: %v", err)
 			}
-			tokenCache := gache.New()
-			tokenCache.SetWithExpire("dummyDomain;dummyRole", &accessCacheData{
+			tokenCache := gache.New[accessCacheData]()
+			tokenCache.SetWithExpire("dummyDomain;dummyRole", accessCacheData{
 				token: dummyToken,
 			}, time.Minute)
 
@@ -633,7 +633,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			data := &accessCacheData{
 				token:             dummyTok2,
 				domain:            "dummyDomain",
@@ -641,7 +641,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 				proxyForPrincipal: "dummyProxy",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", *data, time.Minute)
 
 			ctx, cancel := context.WithCancel(context.Background())
 
@@ -693,7 +693,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -711,7 +711,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			data := &accessCacheData{
 				token:             dummyTok,
 				domain:            "dummyDomain",
@@ -719,7 +719,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 				proxyForPrincipal: "dummyProxy",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", *data, time.Minute)
 
 			ctx, cancel := context.WithCancel(context.Background())
 
@@ -772,7 +772,7 @@ func Test_accessService_StartAccessUpdater(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -840,7 +840,7 @@ func Test_accessService_GetAccessProvider(t *testing.T) {
 func Test_accessService_TokenCacheLen(t *testing.T) {
 	type fields struct {
 		cfg        config.AccessToken
-		tokenCache gache.Gache
+		tokenCache gache.Gache[accessCacheData]
 	}
 	type test struct {
 		name   string
@@ -854,8 +854,8 @@ func Test_accessService_TokenCacheLen(t *testing.T) {
 			if err != nil {
 				fmt.Errorf("Failed to make access token: %v", err)
 			}
-			tokenCache := gache.New()
-			tokenCache.SetWithExpire("dummyDomain;dummyRole", &accessCacheData{
+			tokenCache := gache.New[accessCacheData]()
+			tokenCache.SetWithExpire("dummyDomain;dummyRole", accessCacheData{
 				token: dummyToken,
 			}, time.Minute)
 			return test{
@@ -863,7 +863,7 @@ func Test_accessService_TokenCacheLen(t *testing.T) {
 				fields: fields{
 					tokenCache: tokenCache,
 				},
-				want: tokenCache.Len(),
+				want: 1,
 			}
 		}(),
 	}
@@ -919,7 +919,7 @@ func Test_accessService_getAccessToken(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 	}
@@ -958,7 +958,7 @@ func Test_accessService_getAccessToken(t *testing.T) {
 				name: "getAccessToken returns correct",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -996,7 +996,7 @@ func Test_accessService_getAccessToken(t *testing.T) {
 				name: "getAccessToken returns error",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return "", nil
 					},
@@ -1028,8 +1028,8 @@ func Test_accessService_getAccessToken(t *testing.T) {
 				TokenType:   "Bearer",
 				ExpiresIn:   dummyExpTime,
 			}
-			gac := gache.New()
-			gac.Set("dummyDomain;dummyRole;dummyProxy", &accessCacheData{
+			gac := gache.New[accessCacheData]()
+			gac.Set("dummyDomain;dummyRole;dummyProxy", accessCacheData{
 				token: dummyTok,
 			})
 
@@ -1093,7 +1093,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 		refreshPeriod         time.Duration
@@ -1122,7 +1122,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			dummyToken, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
 			if err != nil {
 				fmt.Errorf("Failed to make access token: %v", err)
@@ -1134,7 +1134,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 				proxyForPrincipal: "",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole", *data, time.Minute)
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1166,7 +1166,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						return errors.New("cannot get new token")
 					}
 
-					tok := newCache.(*accessCacheData).token
+					tok := newCache.token
 					if tok == "" {
 						return errors.New("updated token is nil")
 					}
@@ -1189,7 +1189,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			data := &accessCacheData{
 				token:             "",
 				domain:            "dummyDomain",
@@ -1197,7 +1197,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 				proxyForPrincipal: "",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole", *data, time.Minute)
 
 			data1 := &accessCacheData{
 				token:             "",
@@ -1206,7 +1206,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 				proxyForPrincipal: "",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain1;dummyRole1", data1, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain1;dummyRole1", *data1, time.Minute)
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1239,7 +1239,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 							return errors.New("cannot get new token")
 						}
 
-						tok := newCache.(*accessCacheData).token
+						tok := newCache.token
 						if tok == "" {
 							return errors.New("updated token is nil")
 						}
@@ -1281,7 +1281,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			data := &accessCacheData{
 				token:             dummyTok,
 				domain:            "dummyDomain",
@@ -1289,7 +1289,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 				proxyForPrincipal: "dummyProxy",
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", *data, time.Minute)
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1331,7 +1331,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1353,7 +1353,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 			data := &accessCacheData{
 				token:             dummyTok,
 				domain:            "dummyDomain",
@@ -1362,7 +1362,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 				expiry:            time.Now().Add(60 * time.Second).Unix(),
 				scope:             "dummyDomain:dummyRole",
 			}
-			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", data, time.Minute)
+			tokenCache.SetWithExpire("dummyDomain;dummyRole;dummyProxy", *data, time.Minute)
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1405,7 +1405,7 @@ func Test_accessService_RefreshAccessTokenCache(t *testing.T) {
 						return errors.New("token does not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1454,7 +1454,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 		refreshPeriod         time.Duration
@@ -1489,7 +1489,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1521,7 +1521,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 						return errors.New("token is not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1552,7 +1552,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1597,7 +1597,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 						return errors.New("token is not set to the cache")
 					}
 
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return errors.New("invalid token set on the cache")
 					}
 
@@ -1620,7 +1620,7 @@ func Test_accessService_updateAccessTokenWithRetry(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1703,7 +1703,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 	}
@@ -1743,7 +1743,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				name: "updateAccessToken returns correct",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1776,7 +1776,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				name: "updateAccessToken token returns error",
 				fields: fields{
 					httpClient: atomic.Value{},
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return "", dummyErr
 					},
@@ -1811,7 +1811,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				name: "updateAccessToken new request returns error",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return "", nil
 					},
@@ -1847,7 +1847,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				name: "updateAccessToken get token error",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1884,7 +1884,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				name: "updateAccessToken decode token error",
 				fields: fields{
 					httpClient: httpClient,
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 					token: func() (string, error) {
 						return dummyTok, nil
 					},
@@ -1919,7 +1919,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 
 			var httpClient atomic.Value
 			httpClient.Store(dummyServer.Client())
@@ -1946,7 +1946,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					if !ok {
 						return fmt.Errorf("element cannot found in cache")
 					}
-					if c.(*accessCacheData).token != dummyTok {
+					if c.token != dummyTok {
 						return fmt.Errorf("token not matched, got: %v, want: %v", c, dummyTok)
 					}
 					if math.Abs(time.Unix(0, exp).Sub(dummyExpTime).Seconds()) > (time.Minute+(time.Second*3)).Seconds()*3 {
@@ -1976,7 +1976,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 			})
 			dummyServer := httptest.NewTLSServer(sampleHandler)
 
-			tokenCache := gache.New()
+			tokenCache := gache.New[accessCacheData]()
 
 			// set another dummy token and see if it is updated
 			dummyTok2, err := makeAccessTokenImpl("dummyDomain", "dummyRole", 60)
@@ -1984,7 +1984,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 				fmt.Errorf("Failed to make access token: %v", err)
 			}
 			dummyToken2 := fmt.Sprintf(`{"access_token":"%v","token_type":"Bearer","expires_in":%v,"scope":"dummyDomain:dummyRole"}"`, dummyTok2, dummyExpTime.Unix())
-			tokenCache.SetWithExpire("dummyDomain;dummyRole", &accessCacheData{
+			tokenCache.SetWithExpire("dummyDomain;dummyRole", accessCacheData{
 				token: dummyToken2,
 			}, time.Second)
 
@@ -2013,7 +2013,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 					if !ok {
 						return fmt.Errorf("element cannot found in cache")
 					}
-					if tok.(*accessCacheData).token != dummyTok {
+					if tok.token != dummyTok {
 						return fmt.Errorf("Token not updated")
 					}
 
@@ -2074,7 +2074,7 @@ func Test_accessService_updateAccessToken(t *testing.T) {
 
 func Test_accessService_storeTokenCache(t *testing.T) {
 	type fields struct {
-		tokenCache  gache.Gache
+		tokenCache  gache.Gache[accessCacheData]
 		memoryUsage int64
 	}
 	type args struct {
@@ -2094,7 +2094,7 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 			return test{
 				name: "storeTokenCache store correct memoryUsage when cache does not exist",
 				fields: fields{
-					tokenCache:  gache.New(),
+					tokenCache:  gache.New[accessCacheData](),
 					memoryUsage: 0,
 				},
 				args: args{
@@ -2111,8 +2111,8 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 		func() test {
 			dummyTok := "dummyToken"
 
-			tokenCache := gache.New()
-			tokenCache.SetWithExpire("dummy", &accessCacheData{
+			tokenCache := gache.New[accessCacheData]()
+			tokenCache.SetWithExpire("dummy", accessCacheData{
 				token: dummyTok,
 			}, time.Minute)
 
@@ -2134,8 +2134,9 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 			}
 		}(),
 		func() test {
-			tokenCache := gache.New()
-			tokenCache.SetWithExpire("dummy", "dummyCache", time.Minute)
+			tokenCache := gache.New[accessCacheData]()
+			// tokenCache.SetWithExpire("dummy", "dummyCache", time.Minute)
+			tokenCache.SetWithExpire("dummy", accessCacheData{}, time.Minute)
 
 			return test{
 				name: "storeTokenCache store correct memoryUsage when old cache is not accessCacheData struct",
@@ -2151,7 +2152,7 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 					expTimeDelta: time.Now().Add(time.Minute),
 					expTime:      &jwt.NumericDate{Time: time.Now().Add(time.Minute)},
 				},
-				want: 245,
+				want: 250,
 			}
 		}(),
 	}
@@ -2215,7 +2216,7 @@ func Test_accessService_fetchAccessToken(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 		httpClient            atomic.Value
 		rootCAs               *x509.CertPool
@@ -2583,7 +2584,7 @@ func Test_accessService_getCache(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 	}
 	type args struct {
@@ -2603,7 +2604,7 @@ func Test_accessService_getCache(t *testing.T) {
 			return test{
 				name: "getCache return not ok (cache not exist)",
 				fields: fields{
-					tokenCache: gache.New(),
+					tokenCache: gache.New[accessCacheData](),
 				},
 				args: args{
 					domain:    "dummyDomain",
@@ -2628,8 +2629,8 @@ func Test_accessService_getCache(t *testing.T) {
 				role:   "dummyRole",
 			}
 
-			tokenCache := gache.New()
-			tokenCache.Set("dummyDomain;dummyRole;principal", &accessCacheData{
+			tokenCache := gache.New[accessCacheData]()
+			tokenCache.Set("dummyDomain;dummyRole;principal", accessCacheData{
 				token:  dummyTok,
 				expiry: dummyExpTime,
 				domain: "dummyDomain",
@@ -2678,7 +2679,7 @@ func Test_accessService_createPostAccessTokenRequest(t *testing.T) {
 		token                 ntokend.TokenProvider
 		athenzURL             string
 		athenzPrincipleHeader string
-		tokenCache            gache.Gache
+		tokenCache            gache.Gache[accessCacheData]
 		expiry                time.Duration
 	}
 	type args struct {
