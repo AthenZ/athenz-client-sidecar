@@ -356,9 +356,9 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 }
 
 func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta time.Time, expTime int64) {
-	oldTokenCacheData, _ := r.domainRoleCache.Get(key)
+	oldTokenCacheData, ok := r.domainRoleCache.Get(key)
 	r.domainRoleCache.SetWithExpire(key, *cd, time.Unix(expTime, 0).Sub(expTimeDelta))
-	if oldTokenCacheData != (cacheData{}) {
+	if ok {
 		oldTokenCacheSize := roleCacheMemoryUsage(&oldTokenCacheData)
 		r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
 	} else {

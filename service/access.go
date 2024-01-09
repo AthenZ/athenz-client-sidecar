@@ -364,9 +364,9 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTimeDelta time.Time, expTime *jwt.NumericDate) {
-	oldTokenCacheData, _ := a.tokenCache.Get(key)
+	oldTokenCacheData, ok := a.tokenCache.Get(key)
 	a.tokenCache.SetWithExpire(key, *acd, expTime.Sub(expTimeDelta))
-	if oldTokenCacheData != (accessCacheData{}) {
+	if ok {
 		oldTokenCacheSize := accessCacheMemoryUsage(&oldTokenCacheData)
 		a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
 		return

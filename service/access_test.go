@@ -2133,28 +2133,6 @@ func Test_accessService_storeTokenCache(t *testing.T) {
 				want: 126,
 			}
 		}(),
-		func() test {
-			tokenCache := gache.New[accessCacheData]()
-			// tokenCache.SetWithExpire("dummy", "dummyCache", time.Minute)
-			tokenCache.SetWithExpire("dummy", accessCacheData{}, time.Minute)
-
-			return test{
-				name: "storeTokenCache store correct memoryUsage when old cache is not accessCacheData struct",
-				fields: fields{
-					tokenCache:  tokenCache,
-					memoryUsage: 111,
-				},
-				args: args{
-					key: "dummy",
-					acd: &accessCacheData{
-						token: "dummyToken2",
-					},
-					expTimeDelta: time.Now().Add(time.Minute),
-					expTime:      &jwt.NumericDate{Time: time.Now().Add(time.Minute)},
-				},
-				want: 250,
-			}
-		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
