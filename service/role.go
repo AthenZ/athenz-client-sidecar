@@ -27,7 +27,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -68,8 +67,6 @@ type roleService struct {
 	refreshPeriod    time.Duration
 	errRetryMaxCount int
 	errRetryInterval time.Duration
-
-	mu sync.RWMutex
 }
 
 type cacheData struct {
@@ -301,7 +298,8 @@ func (r *roleService) TokenCacheLen() int {
 func (r *roleService) TokenCacheSize() int64 {
 	// To estimate the memory usage of the cache,
 	// we multiply memoryUsage by 1.125　to account for overhead of map structure
-	return int64(float64(r.memoryUsage) * 1.125)
+	memUsage := atomic.LoadInt64(&r.memoryUsage)
+	return int64(float64(memUsage) * 1.125)
 }
 
 // updateRoleTokenWithRetry wraps updateRoleToken with retry logic.
@@ -359,17 +357,15 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 }
 
 func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta time.Time, expTime int64) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	oldTokenCacheData, ok := r.domainRoleCache.Get(key)
 	r.domainRoleCache.SetWithExpire(key, *cd, time.Unix(expTime, 0).Sub(expTimeDelta))
 	if ok {
 		oldTokenCacheSize := roleCacheMemoryUsage(&oldTokenCacheData)
-		r.memoryUsage += roleCacheMemoryUsage(cd) - oldTokenCacheSize
+		cacheSizeDiff := roleCacheMemoryUsage(&oldTokenCacheData) - oldTokenCacheSize
+		atomic.AddInt64(&r.memoryUsage, cacheSizeDiff)
 	} else {
-		r.memoryUsage += roleCacheMemoryUsage(cd)
-		r.memoryUsage += int64(len(key))
+		tokenCacheSize := roleCacheMemoryUsage(cd)
+		atomic.AddInt64(&r.memoryUsage, tokenCacheSize+int64(len(key)))
 	}
 	return
 }

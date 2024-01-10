@@ -25,7 +25,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -67,8 +66,6 @@ type accessService struct {
 	refreshPeriod    time.Duration
 	errRetryMaxCount int
 	errRetryInterval time.Duration
-
-	mu sync.RWMutex
 }
 
 type accessCacheData struct {
@@ -298,7 +295,8 @@ func (a *accessService) TokenCacheLen() int {
 func (a *accessService) TokenCacheSize() int64 {
 	// To estimate the memory usage of the cache,
 	// we multiply memoryUsage by 1.125　to account for overhead of map structure
-	return int64(float64(a.memoryUsage) * 1.125)
+	memUsage := atomic.LoadInt64(&a.memoryUsage)
+	return int64(float64(memUsage) * 1.125)
 }
 
 // updateAccessTokenWithRetry wraps updateAccessToken with retry logic.
@@ -367,17 +365,16 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTimeDelta time.Time, expTime *jwt.NumericDate) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	oldTokenCacheData, ok := a.tokenCache.Get(key)
 	a.tokenCache.SetWithExpire(key, *acd, expTime.Sub(expTimeDelta))
 	if ok {
 		oldTokenCacheSize := accessCacheMemoryUsage(&oldTokenCacheData)
-		a.memoryUsage += accessCacheMemoryUsage(acd) - oldTokenCacheSize
+		cacheSizeDiff := accessCacheMemoryUsage(acd) - oldTokenCacheSize
+		atomic.AddInt64(&a.memoryUsage, cacheSizeDiff)
 		return
 	}
-	a.memoryUsage += accessCacheMemoryUsage(acd) + int64(len(key))
+	tokenCacheSize := accessCacheMemoryUsage(acd)
+	atomic.AddInt64(&a.memoryUsage, tokenCacheSize+int64(len(key)))
 	return
 }
 
