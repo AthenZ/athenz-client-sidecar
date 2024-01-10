@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -66,6 +67,8 @@ type accessService struct {
 	refreshPeriod    time.Duration
 	errRetryMaxCount int
 	errRetryInterval time.Duration
+
+	mu sync.RWMutex
 }
 
 type accessCacheData struct {
@@ -364,6 +367,9 @@ func (a *accessService) updateAccessToken(ctx context.Context, domain, role, pro
 }
 
 func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTimeDelta time.Time, expTime *jwt.NumericDate) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	oldTokenCacheData, ok := a.tokenCache.Get(key)
 	a.tokenCache.SetWithExpire(key, *acd, expTime.Sub(expTimeDelta))
 	if ok {

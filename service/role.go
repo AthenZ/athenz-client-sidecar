@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -67,6 +68,8 @@ type roleService struct {
 	refreshPeriod    time.Duration
 	errRetryMaxCount int
 	errRetryInterval time.Duration
+
+	mu sync.RWMutex
 }
 
 type cacheData struct {
@@ -356,6 +359,9 @@ func (r *roleService) updateRoleToken(ctx context.Context, domain, role, proxyFo
 }
 
 func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta time.Time, expTime int64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	oldTokenCacheData, ok := r.domainRoleCache.Get(key)
 	r.domainRoleCache.SetWithExpire(key, *cd, time.Unix(expTime, 0).Sub(expTimeDelta))
 	if ok {
