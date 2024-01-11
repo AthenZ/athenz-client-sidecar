@@ -21,6 +21,8 @@ type RoleServiceMock struct {
 	StartRoleUpdaterFunc      func(context.Context) <-chan error
 	RefreshRoleTokenCacheFunc func(ctx context.Context) <-chan error
 	GetRoleProviderFunc       func() RoleProvider
+	TokenCacheLenFunc         func() int
+	TokenCacheSizeFunc        func() int64
 }
 
 // StartRoleUpdater is a mock implementation of RoleService.StartRoleUpdater
@@ -36,4 +38,12 @@ func (asm *RoleServiceMock) RefreshRoleTokenCache(ctx context.Context) <-chan er
 // GetRoleProvider is a mock implementation of RoleService.GetRoleProvider
 func (asm *RoleServiceMock) GetRoleProvider() RoleProvider {
 	return asm.GetRoleProviderFunc()
+}
+
+func (asm *RoleServiceMock) TokenCacheLen() int {
+	return asm.TokenCacheLenFunc()
+}
+
+func (asm *RoleServiceMock) TokenCacheSize() int64 {
+	return asm.TokenCacheSizeFunc()
 }

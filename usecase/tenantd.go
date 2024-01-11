@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"runtime/metrics"
 	"time"
 
 	"github.com/AthenZ/athenz-client-sidecar/v2/config"
@@ -156,7 +157,78 @@ func (t *clientd) Start(ctx context.Context) chan []error {
 			}
 		}()
 	}
+
+	// start token cache report daemon (no need for graceful shutdown)
+	reportTicker := time.NewTicker(time.Minute)
+	go func() {
+		defer reportTicker.Stop()
+		for {
+			select {
+			case <-reportTicker.C:
+				report(t)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	return t.server.ListenAndServe(ctx)
+}
+
+func report(t *clientd) {
+	// gather golang metrics
+	const sysMemMetric = "/memory/classes/total:bytes"                  // go_memstats_sys_bytes
+	const heapMemMetric = "/memory/classes/heap/objects:bytes"          // go_memstats_heap_alloc_bytes
+	const releasedHeapMemMetric = "/memory/classes/heap/released:bytes" // go_memstats_heap_released_bytes
+	// https://pkg.go.dev/runtime/metrics#pkg-examples
+	// https://github.com/prometheus/client_golang/blob/3f8bd73e9b6d1e20e8e1536622bd0fda8bb3cb50/prometheus/go_collector_latest.go#L32
+	samples := make([]metrics.Sample, 3)
+	samples[0].Name = sysMemMetric
+	samples[1].Name = heapMemMetric
+	samples[2].Name = releasedHeapMemMetric
+	metrics.Read(samples)
+	validSample := func(s metrics.Sample) float64 {
+		name, value := s.Name, s.Value
+		switch value.Kind() {
+		case metrics.KindUint64:
+			return float64(value.Uint64())
+		case metrics.KindFloat64:
+			return value.Float64()
+		case metrics.KindBad:
+			// Check if the metric is actually supported. If it's not, the resulting value will always have kind KindBad.
+			panic(fmt.Sprintf("%q: metric is no longer supported", name))
+		default:
+			// Check if the metrics specification has changed.
+			panic(fmt.Sprintf("%q: unexpected metric Kind: %v\n", name, value.Kind()))
+		}
+	}
+	sysMemValue := validSample(samples[0])
+	heapMemValue := validSample(samples[1])
+	releasedHeapMemValue := validSample(samples[2])
+	sysMemInUse := sysMemValue - releasedHeapMemValue
+
+	// gather token cache metrics
+	var (
+		atcSize, rtcSize int64
+		atcLen, rtcLen   int
+	)
+	if t.access != nil {
+		atcSize = t.access.TokenCacheSize()
+		atcLen = t.access.TokenCacheLen()
+	}
+	if t.role != nil {
+		rtcSize = t.role.TokenCacheSize()
+		rtcLen = t.role.TokenCacheLen()
+	}
+	totalSize := atcSize + rtcSize
+	totalLen := atcLen + rtcLen
+
+	// report as log message
+	toMB := func(f float64) float64 {
+		return f / 1024 / 1024
+	}
+
+	glg.Infof("system_memory_inuse[%.1fMB]; go_memstats_heap_alloc_bytes[%.1fMB]; accesstoken:cached_token_bytes[%.1fMB],entries[%d]; roletoken:cached_token_bytes[%.1fMB],entries[%d]; total:cached_token_bytes[%.1fMB],entries[%d]; cache_token_ratio:sys[%.1f%%],heap[%.1f%%]", toMB(sysMemInUse), toMB(heapMemValue), toMB(float64(atcSize)), atcLen, toMB(float64(rtcSize)), rtcLen, toMB(float64(totalSize)), totalLen, float64(totalSize)/sysMemInUse*100, float64(totalSize)/heapMemValue*100)
 }
 
 // createNtokend returns a TokenService object or any error
