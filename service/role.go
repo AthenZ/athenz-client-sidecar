@@ -361,8 +361,7 @@ func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta ti
 	if ok {
 		r.memoryUsage.Add(roleCacheMemoryUsage(cd) - roleCacheMemoryUsage(&oldTokenCacheData))
 	} else {
-		tokenCacheSize := roleCacheMemoryUsage(cd)
-		r.memoryUsage.Add(tokenCacheSize + int64(len(key)))
+		r.memoryUsage.Add(roleCacheMemoryUsage(cd) + int64(len(key)))
 	}
 	return
 }
