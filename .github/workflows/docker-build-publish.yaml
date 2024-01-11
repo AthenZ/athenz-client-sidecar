@@ -25,8 +25,9 @@ on:
 
 env:
   DOCKER_BUILDX_PLATFORM: linux/amd64
-  DOCKER_REGISTRY_OWNER: athenz
-  DOCKER_REGISTRY_USER: abvaidya
+  DOCKER_REGISTRY_ORG: athenz
+  # DOCKER_REGISTRY_USER: values for docker login is stored in repository variables
+  # DOCKER_REGISTRY_TOKEN_NAME: values for docker login is stored in repository variables
 
 jobs:
   build:
@@ -60,11 +61,8 @@ jobs:
         run: |
           # Use docker.io for Docker Hub if empty
           [[ "${{ env.DOCKER_REGISTRY_URL}}" = "" ]] && echo "DOCKER_REGISTRY_URL=docker.io" >> $GITHUB_ENV
-          [[ "${{ env.DOCKER_REGISTRY_OWNER }}" = "" ]] && echo "DOCKER_REGISTRY_OWNER=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
+          [[ "${{ env.DOCKER_REGISTRY_ORG }}" = "" ]] && echo "DOCKER_REGISTRY_ORG=${{ env.CI_REPOSITORY_OWNER }}" >> $GITHUB_ENV
           [[ "${{ env.DOCKER_REGISTRY_IMAGE }}" = "" ]] && echo "DOCKER_REGISTRY_IMAGE=${{ env.CI_REPOSITORY_NAME }}" >> $GITHUB_ENV
-          [[ "${{ env.DOCKER_REGISTRY_TOKEN}}" = "" ]] && echo "DOCKER_REGISTRY_TOKEN=${{ secrets.DOCKER_REGISTRY_TOKEN }}" >> $GITHUB_ENV
-          [[ "${{ env.DELETE_UNTAGGED_IMAGES_TOKEN }}" = "" ]] && echo "DELETE_UNTAGGED_IMAGES_TOKEN=${{ env.DOCKER_REGISTRY_TOKEN }}" >> $GITHUB_ENV
-          [[ "${{ env.DELETE_UNTAGGED_IMAGES_PER_PAGE }}" = "" ]] && echo "DELETE_UNTAGGED_IMAGES_PER_PAGE=100" >> $GITHUB_ENV
 
       # This action checks-out your repository under $GITHUB_WORKSPACE, so your workflow can access it.
       # https://github.com/actions/checkout
@@ -73,7 +71,7 @@ jobs:
         id: checkout
         # You may pin to the exact commit or the version.
         # uses: https://github.com/actions/checkout/tags
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # This action sets up a go environment for use in actions by:
       # - Optionally downloading and caching a version of Go by version and adding to PATH.
@@ -147,9 +145,9 @@ jobs:
         id: meta
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/metadata-action/tags
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}
+          images: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}
           # for latest tag
           # latest=auto for tagging latest only for "master" branch
           flavor: |
@@ -173,14 +171,14 @@ jobs:
         id: login
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/login-action/tags
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           # Server address of Docker registry. If not set then will default to Docker Hub
           registry: ${{ env.DOCKER_REGISTRY_URL }} # optional
           # Username used to log against the Docker registry
-          username: ${{ env.DOCKER_REGISTRY_USER }} # optional
+          username: ${{ vars.DOCKER_REGISTRY_USER }} # optional
           # Password or personal access token used to log against the Docker registry
-          password: ${{ env.DOCKER_REGISTRY_TOKEN }} # optional
+          password: ${{ secrets[vars.DOCKER_REGISTRY_TOKEN_NAME] }} # optional
           # Log out from the Docker registry at the end of a job
           logout: true # optional, default is true
 
@@ -191,7 +189,7 @@ jobs:
         id: qemu
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/setup-qemu-action/tags
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       # GitHub Action to set up Docker Buildx.
       # https://github.com/docker/setup-buildx-action
@@ -200,7 +198,7 @@ jobs:
         id: buildx
         # You may pin to the exact commit or the version.
         # uses: https://github.com/docker/setup-buildx-action/tags
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
@@ -217,7 +215,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           # push: true
           # load: false
-          # tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_OWNER }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
+          # tags: ${{ env.DOCKER_REGISTRY_URL }}/${{ env.DOCKER_REGISTRY_ORG }}/${{ env.DOCKER_REGISTRY_IMAGE }}:nightly
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.DOCKER_BUILDX_PLATFORM }}
           build-args: |
