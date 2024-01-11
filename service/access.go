@@ -55,7 +55,7 @@ type accessService struct {
 	athenzURL             string
 	athenzPrincipleHeader string
 	tokenCache            gache.Gache[accessCacheData]
-	memoryUsage           int64
+	memoryUsage           *atomic.Int64
 	group                 singleflight.Group
 	expiry                time.Duration
 	httpClient            atomic.Value
@@ -198,7 +198,7 @@ func NewAccessService(cfg config.AccessToken, token ntokend.TokenProvider) (Acce
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
 		tokenCache:            gache.New[accessCacheData](),
-		memoryUsage:           0,
+		memoryUsage:           &atomic.Int64{},
 		expiry:                exp,
 		httpClient:            httpClient,
 		rootCAs:               cp,
@@ -295,8 +295,7 @@ func (a *accessService) TokenCacheLen() int {
 func (a *accessService) TokenCacheSize() int64 {
 	// To estimate the memory usage of the cache,
 	// we multiply memoryUsage by 1.125　to account for overhead of map structure
-	memUsage := atomic.LoadInt64(&a.memoryUsage)
-	return int64(float64(memUsage) * 1.125)
+	return int64(float64(a.memoryUsage.Load()) * 1.125)
 }
 
 // updateAccessTokenWithRetry wraps updateAccessToken with retry logic.
@@ -368,13 +367,10 @@ func (a *accessService) storeTokenCache(key string, acd *accessCacheData, expTim
 	oldTokenCacheData, ok := a.tokenCache.Get(key)
 	a.tokenCache.SetWithExpire(key, *acd, expTime.Sub(expTimeDelta))
 	if ok {
-		oldTokenCacheSize := accessCacheMemoryUsage(&oldTokenCacheData)
-		cacheSizeDiff := accessCacheMemoryUsage(acd) - oldTokenCacheSize
-		atomic.AddInt64(&a.memoryUsage, cacheSizeDiff)
+		a.memoryUsage.Add(accessCacheMemoryUsage(acd) - accessCacheMemoryUsage(&oldTokenCacheData))
 		return
 	}
-	tokenCacheSize := accessCacheMemoryUsage(acd)
-	atomic.AddInt64(&a.memoryUsage, tokenCacheSize+int64(len(key)))
+	a.memoryUsage.Add(accessCacheMemoryUsage(acd) + int64(len(key)))
 	return
 }
 

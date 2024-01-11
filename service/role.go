@@ -56,7 +56,7 @@ type roleService struct {
 	athenzURL             string
 	athenzPrincipleHeader string
 	domainRoleCache       gache.Gache[cacheData]
-	memoryUsage           int64
+	memoryUsage           *atomic.Int64
 	group                 singleflight.Group
 	expiry                time.Duration
 	httpClient            atomic.Value
@@ -210,7 +210,7 @@ func NewRoleService(cfg config.RoleToken, token ntokend.TokenProvider) (RoleServ
 		athenzURL:             cfg.AthenzURL,
 		athenzPrincipleHeader: cfg.PrincipalAuthHeader,
 		domainRoleCache:       gache.New[cacheData](),
-		memoryUsage:           0,
+		memoryUsage:           &atomic.Int64{},
 		expiry:                exp,
 		httpClient:            httpClient,
 		rootCAs:               cp,
@@ -298,8 +298,7 @@ func (r *roleService) TokenCacheLen() int {
 func (r *roleService) TokenCacheSize() int64 {
 	// To estimate the memory usage of the cache,
 	// we multiply memoryUsage by 1.125　to account for overhead of map structure
-	memUsage := atomic.LoadInt64(&r.memoryUsage)
-	return int64(float64(memUsage) * 1.125)
+	return int64(float64(r.memoryUsage.Load()) * 1.125)
 }
 
 // updateRoleTokenWithRetry wraps updateRoleToken with retry logic.
@@ -360,12 +359,10 @@ func (r *roleService) storeTokenCache(key string, cd *cacheData, expTimeDelta ti
 	oldTokenCacheData, ok := r.domainRoleCache.Get(key)
 	r.domainRoleCache.SetWithExpire(key, *cd, time.Unix(expTime, 0).Sub(expTimeDelta))
 	if ok {
-		oldTokenCacheSize := roleCacheMemoryUsage(&oldTokenCacheData)
-		cacheSizeDiff := roleCacheMemoryUsage(&oldTokenCacheData) - oldTokenCacheSize
-		atomic.AddInt64(&r.memoryUsage, cacheSizeDiff)
+		r.memoryUsage.Add(roleCacheMemoryUsage(cd) - roleCacheMemoryUsage(&oldTokenCacheData))
 	} else {
 		tokenCacheSize := roleCacheMemoryUsage(cd)
-		atomic.AddInt64(&r.memoryUsage, tokenCacheSize+int64(len(key)))
+		r.memoryUsage.Add(tokenCacheSize + int64(len(key)))
 	}
 	return
 }

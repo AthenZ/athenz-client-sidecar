@@ -496,6 +496,7 @@ func Test_roleService_StartRoleUpdater(t *testing.T) {
 		athenzURL             string
 		athenzPrincipleHeader string
 		domainRoleCache       gache.Gache[cacheData]
+		memoryUsage           *atomic.Int64
 		expiry                time.Duration
 		httpClient            atomic.Value
 
@@ -544,6 +545,7 @@ func Test_roleService_StartRoleUpdater(t *testing.T) {
 				fields: fields{
 					httpClient:            httpClient,
 					domainRoleCache:       domainRoleCache,
+					memoryUsage:           &atomic.Int64{},
 					expiry:                time.Second,
 					athenzURL:             dummyServer.URL,
 					athenzPrincipleHeader: "Athenz-Principal",
@@ -616,6 +618,7 @@ func Test_roleService_StartRoleUpdater(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return "dummyToken", nil
 					},
@@ -695,6 +698,7 @@ func Test_roleService_StartRoleUpdater(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return "dummyToken", nil
 					},
@@ -757,6 +761,7 @@ func Test_roleService_StartRoleUpdater(t *testing.T) {
 				athenzURL:             tt.fields.athenzURL,
 				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
 				domainRoleCache:       tt.fields.domainRoleCache,
+				memoryUsage:           tt.fields.memoryUsage,
 				expiry:                tt.fields.expiry,
 				httpClient:            tt.fields.httpClient,
 				refreshPeriod:         tt.fields.refreshPeriod,
@@ -843,21 +848,23 @@ func Test_roleService_TokenCacheLen(t *testing.T) {
 
 func Test_roleService_TokenCacheSize(t *testing.T) {
 	type fields struct {
-		memoryUsage int64
+		memoryUsage *atomic.Int64
 	}
 	type test struct {
-		name   string
-		fields fields
-		want   int64
+		name         string
+		fields       fields
+		initialValue int64
+		want         int64
 	}
 	tests := []test{
 		func() test {
 			return test{
 				name: "TokenCacheSize exactly return memoryUsage field",
 				fields: fields{
-					memoryUsage: 100,
+					memoryUsage: &atomic.Int64{},
 				},
-				want: 112,
+				initialValue: 100,
+				want:         112,
 			}
 		}(),
 	}
@@ -866,6 +873,7 @@ func Test_roleService_TokenCacheSize(t *testing.T) {
 			r := &roleService{
 				memoryUsage: tt.fields.memoryUsage,
 			}
+			r.memoryUsage.Store(tt.initialValue)
 			got := r.TokenCacheSize()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("roleService.TokenCacheSize() = %v, want %v", got, tt.want)
@@ -881,6 +889,7 @@ func Test_roleService_getRoleToken(t *testing.T) {
 		athenzURL             string
 		athenzPrincipleHeader string
 		domainRoleCache       gache.Gache[cacheData]
+		memoryUsage           *atomic.Int64
 		expiry                time.Duration
 		httpClient            atomic.Value
 	}
@@ -918,6 +927,7 @@ func Test_roleService_getRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -955,6 +965,7 @@ func Test_roleService_getRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return "", nil
 					},
@@ -1020,6 +1031,7 @@ func Test_roleService_getRoleToken(t *testing.T) {
 				athenzURL:             tt.fields.athenzURL,
 				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
 				domainRoleCache:       tt.fields.domainRoleCache,
+				memoryUsage:           tt.fields.memoryUsage,
 				expiry:                tt.fields.expiry,
 				httpClient:            tt.fields.httpClient,
 			}
@@ -1047,6 +1059,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 		athenzURL             string
 		athenzPrincipleHeader string
 		domainRoleCache       gache.Gache[cacheData]
+		memoryUsage           atomic.Int64
 		expiry                time.Duration
 		httpClient            atomic.Value
 		refreshPeriod         time.Duration
@@ -1093,6 +1106,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 					athenzURL:             dummyServer.URL,
 					athenzPrincipleHeader: "dummy",
 					domainRoleCache:       roleCache,
+					memoryUsage:           atomic.Int64{},
 					expiry:                time.Minute,
 					httpClient:            httpClient,
 					refreshPeriod:         time.Second,
@@ -1163,6 +1177,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 					athenzURL:             dummyServer.URL,
 					athenzPrincipleHeader: "dummy",
 					domainRoleCache:       roleCache,
+					memoryUsage:           atomic.Int64{},
 					expiry:                time.Minute,
 					httpClient:            httpClient,
 					refreshPeriod:         time.Second,
@@ -1236,6 +1251,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     atomic.Int64{},
 					token: func() (string, error) {
 						return "dummyToken", nil
 					},
@@ -1309,6 +1325,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     atomic.Int64{},
 					token: func() (string, error) {
 						return "dummyToken", nil
 					},
@@ -1373,6 +1390,7 @@ func Test_roleService_RefreshRoleTokenCache(t *testing.T) {
 				athenzURL:             tt.fields.athenzURL,
 				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
 				domainRoleCache:       tt.fields.domainRoleCache,
+				memoryUsage:           &tt.fields.memoryUsage,
 				expiry:                tt.fields.expiry,
 				httpClient:            tt.fields.httpClient,
 				refreshPeriod:         tt.fields.refreshPeriod,
@@ -1394,6 +1412,7 @@ func Test_roleService_updateRoleTokenWithRetry(t *testing.T) {
 		athenzURL             string
 		athenzPrincipleHeader string
 		domainRoleCache       gache.Gache[cacheData]
+		memoryUsage           *atomic.Int64
 		expiry                time.Duration
 		httpClient            atomic.Value
 		refreshPeriod         time.Duration
@@ -1435,6 +1454,7 @@ func Test_roleService_updateRoleTokenWithRetry(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1495,6 +1515,7 @@ func Test_roleService_updateRoleTokenWithRetry(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1560,6 +1581,7 @@ func Test_roleService_updateRoleTokenWithRetry(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1617,6 +1639,7 @@ func Test_roleService_updateRoleTokenWithRetry(t *testing.T) {
 				athenzURL:             tt.fields.athenzURL,
 				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
 				domainRoleCache:       tt.fields.domainRoleCache,
+				memoryUsage:           tt.fields.memoryUsage,
 				expiry:                tt.fields.expiry,
 				httpClient:            tt.fields.httpClient,
 				refreshPeriod:         tt.fields.refreshPeriod,
@@ -1638,6 +1661,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 		athenzURL             string
 		athenzPrincipleHeader string
 		domainRoleCache       gache.Gache[cacheData]
+		memoryUsage           *atomic.Int64
 		expiry                time.Duration
 		httpClient            atomic.Value
 	}
@@ -1676,6 +1700,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1707,6 +1732,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      atomic.Value{},
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return "", dummyErr
 					},
@@ -1740,6 +1766,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return "", nil
 					},
@@ -1774,6 +1801,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1810,6 +1838,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: gache.New[cacheData](),
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1850,6 +1879,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: roleRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1916,6 +1946,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				fields: fields{
 					httpClient:      httpClient,
 					domainRoleCache: domainRoleCache,
+					memoryUsage:     &atomic.Int64{},
 					token: func() (string, error) {
 						return dummyToken, nil
 					},
@@ -1968,6 +1999,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 				athenzURL:             tt.fields.athenzURL,
 				athenzPrincipleHeader: tt.fields.athenzPrincipleHeader,
 				domainRoleCache:       tt.fields.domainRoleCache,
+				memoryUsage:           tt.fields.memoryUsage,
 				expiry:                tt.fields.expiry,
 				httpClient:            tt.fields.httpClient,
 			}
@@ -1998,7 +2030,7 @@ func Test_roleService_updateRoleToken(t *testing.T) {
 func Test_roleService_storeTokenCache(t *testing.T) {
 	type fields struct {
 		domainRoleCache gache.Gache[cacheData]
-		memoryUsage     int64
+		memoryUsage     *atomic.Int64
 	}
 	type args struct {
 		key          string
@@ -2007,10 +2039,11 @@ func Test_roleService_storeTokenCache(t *testing.T) {
 		expTime      int64
 	}
 	type test struct {
-		name   string
-		fields fields
-		args   args
-		want   int64
+		name         string
+		fields       fields
+		initialValue int64
+		args         args
+		want         int64
 	}
 	tests := []test{
 		func() test {
@@ -2018,7 +2051,7 @@ func Test_roleService_storeTokenCache(t *testing.T) {
 				name: "storeTokenCache store correct memoryUsage when cache does not exist",
 				fields: fields{
 					domainRoleCache: gache.New[cacheData](),
-					memoryUsage:     0,
+					memoryUsage:     &atomic.Int64{},
 				},
 				args: args{
 					key: "dummy",
@@ -2052,8 +2085,9 @@ func Test_roleService_storeTokenCache(t *testing.T) {
 				name: "storeTokenCache store correct memoryUsage when cache already exists",
 				fields: fields{
 					domainRoleCache: domainRoleCache,
-					memoryUsage:     126,
+					memoryUsage:     &atomic.Int64{},
 				},
+				initialValue: 126,
 				args: args{
 					key: "dummy",
 					cd: &cacheData{
@@ -2065,7 +2099,7 @@ func Test_roleService_storeTokenCache(t *testing.T) {
 					expTimeDelta: time.Now().Add(time.Minute),
 					expTime:      0,
 				},
-				want: 141,
+				want: 142,
 			}
 		}(),
 	}
@@ -2075,7 +2109,7 @@ func Test_roleService_storeTokenCache(t *testing.T) {
 				domainRoleCache: tt.fields.domainRoleCache,
 				memoryUsage:     tt.fields.memoryUsage,
 			}
-
+			r.memoryUsage.Store(tt.initialValue)
 			r.storeTokenCache(tt.args.key, tt.args.cd, tt.args.expTimeDelta, tt.args.expTime)
 			got := r.TokenCacheSize()
 			if !reflect.DeepEqual(got, tt.want) {
