@@ -17,6 +17,8 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -129,6 +131,11 @@ func main() {
 			}
 			glg.Error(err)
 		}
+	}()
+
+	go func() {
+		glg.Warn("🌟pprof server start~")
+		http.ListenAndServe(":6083", nil)
 	}()
 
 	p, err := parseParams()
